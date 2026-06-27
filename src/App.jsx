@@ -1376,7 +1376,7 @@ export default function App() {
 
   // Helper: determine if onboarding forms should display
   const showLandingPage = !isOnboarded && role === 'teen' && onboardingStep === 0;
-  const showStartupSelector = !isOnboarded && role === 'teen' && onboardingStep === 1;
+  const showWelcomeIntroStep = !isOnboarded && role === 'teen' && onboardingStep === 1;
   const showUsernameStep = !isOnboarded && role === 'teen' && onboardingStep === 2;
   const showFormStep = !isOnboarded && role === 'teen' && onboardingStep === 3;
   const showSuccessStep = !isOnboarded && role === 'teen' && onboardingStep === 4;
@@ -1532,72 +1532,64 @@ export default function App() {
             </div>
             
             <div className="landing-hero">
-              <h2 className="landing-title">Care Cycle</h2>
+              <h2 className="landing-title">Welcome to Care Cycle</h2>
               <p className="landing-subtitle">Care Cycle - Your treatment, your way.</p>
             </div>
 
-            <button onClick={() => setOnboardingStep(2)} className="landing-cta-btn">
-              התחילי מעקב (נערה)
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', alignItems: 'center', marginBottom: '2.5rem' }}>
+              <button onClick={() => { setRole('teen'); setOnboardingStep(1); }} className="landing-cta-btn" style={{ margin: 0 }}>
+                חיבור נערה (Teen Login)
+              </button>
 
-            <button onClick={() => setRole('parent')} className="landing-secondary-btn">
-              כניסה כהורה מפקח
-            </button>
+              <button onClick={() => { setRole('parent'); }} className="landing-secondary-btn" style={{ margin: 0 }}>
+                חיבור הורה (Parent Login)
+              </button>
+            </div>
 
-            <div className="glass-card install-guide-card">
-              <h3 className="install-title">
+            {/* Clinical & Usage Notes Banner */}
+            <div className="parent-warn-banner" style={{ border: '1px solid rgba(217, 70, 239, 0.25)', background: 'rgba(217, 70, 239, 0.04)', color: '#4b5563', padding: '1rem', borderRadius: '18px', textAlign: 'right', fontSize: '0.85rem', width: '100%', maxWidth: '400px', margin: '0 auto 2rem auto', boxShadow: '0 4px 15px rgba(217, 70, 239, 0.05)' }}>
+              <div style={{ fontWeight: 'bold', color: '#ff2e93', marginBottom: '0.4rem', fontSize: '0.9rem' }}>📌 מידע רפואי ושימוש חשוב:</div>
+              <ul style={{ margin: 0, paddingRight: '1rem', listStyleType: 'disc', lineHeight: '1.5' }}>
+                <li>יש להשאיר את האפליקציה פתוחה ברקע כדי להבטיח את קבלת התראות הנטילה והתזכורות בזמן.</li>
+                <li>הפרטיות שלך היא בעדיפות עליונה. הנתונים שלך מוצפנים ונשמרים בצורה מאובטחת.</li>
+              </ul>
+            </div>
+
+            <div className="glass-card install-guide-card" style={{ margin: '0 auto' }}>
+              <h3 className="install-title" style={{ color: '#a855f7' }}>
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: '6px' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
-                מדריך התקנה למסך הבית (PWA)
+                התקנה מהירה למסך הבית (PWA)
               </h3>
               <div className="install-steps">
                 <div className="install-step">
-                  <span className="step-number">1</span>
-                  <span className="step-text">לחצי על כפור השיתוף בדפדפן (סמל <span style={{ fontWeight: 'bold' }}>שיתוף</span> 📤 בתחתית ה-iPhone או תפריט 3 הנקודות ב-Android).</span>
+                  <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>1</span>
+                  <span className="step-text">לחצי על כפתור השיתוף בדפדפן (סמל <span style={{ fontWeight: 'bold' }}>שיתוף</span> 📤 בתחתית ה-iPhone או תפריט 3 הנקודות ב-Android).</span>
                 </div>
                 <div className="install-step">
-                  <span className="step-number">2</span>
+                  <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>2</span>
                   <span className="step-text">בחרי באפשרות <span style={{ fontWeight: 'bold' }}>"הוספה למסך הבית"</span> (Add to Home Screen) מתוך הרשימה.</span>
                 </div>
                 <div className="install-step">
-                  <span className="step-number">3</span>
-                  <span className="step-text">אשרי את השם ולחצי על "הוסף". האפליקציה תופיע כעת כאייקון עצמאי במסך הבית שלך לגישה מהירה ונוחה!</span>
+                  <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>3</span>
+                  <span className="step-text">אשרי את השם. האפליקציה תותקן כאייקון עצמאי המותאם לנייד ללא צורך בחנות האפליקציות!</span>
                 </div>
               </div>
             </div>
           </div>
-        ) : showStartupSelector ? (
-          <div className="startup-container">
-            <div className="startup-title-wrapper">
-              <div className="startup-logo">
-                <HeartPulse size={48} />
-              </div>
-              <h2 className="startup-title">Care Cycle</h2>
-              <p className="startup-subtitle">המלווה האישי שלך למעקב בריאותי ונטילת תרופות</p>
+        ) : showWelcomeIntroStep ? (
+          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto', textAlign: 'center', animation: 'zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+            <div className="status-icon-wrapper medication" style={{ margin: '0 auto 1.5rem auto', background: 'linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 100%)', color: '#ff2e93', boxShadow: '0 8px 20px rgba(217, 70, 239, 0.15)' }}>
+              <ShieldCheck size={32} />
             </div>
-            
-            <div className="startup-options">
-              <div className="startup-option-card" onClick={() => setOnboardingStep(1)}>
-                <div className="option-icon-wrapper">
-                  <User size={24} />
-                </div>
-                <div className="option-content">
-                  <h3>כניסה כנערה</h3>
-                  <p>התחילי מעקב אישי, הגדירי תזכורות וצפי בלוח השנה שלך</p>
-                </div>
-              </div>
-
-              <div className="startup-option-card" onClick={() => setRole('parent')}>
-                <div className="option-icon-wrapper">
-                  <ShieldCheck size={24} />
-                </div>
-                <div className="option-content">
-                  <h3>כניסה כהורה</h3>
-                  <p>התחברי למעקב הנטילה של בתך באמצעות קוד הזמנה</p>
-                </div>
-              </div>
-            </div>
+            <h2 className="status-title" style={{ color: '#4c1d95', marginBottom: '1rem' }}>ברוכה הבאה להגדרות הפרטיות שלך</h2>
+            <p className="status-subtitle" style={{ fontSize: '0.95rem', color: '#6b21a8', lineHeight: '1.5', marginBottom: '2.5rem' }}>
+              כאן תוכלי להגדיר את תזכורות הנטילה האישיות שלך, מינון התרופה וליצור קוד חיבור להורה מפקח. הנתונים שלך מאובטחים לחלוטין.
+            </p>
+            <button onClick={() => setOnboardingStep(2)} className="submit-btn" style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ff2e93 100%)' }}>
+              בואי נתחיל 🌸
+            </button>
           </div>
         ) : showUsernameStep ? (
           <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto' }}>
@@ -1715,21 +1707,21 @@ export default function App() {
             </div>
           </div>
         ) : showSuccessStep ? (
-          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto', textAlign: 'center' }}>
-            <div className="status-icon-wrapper medication" style={{ margin: '0 auto 1.5rem auto' }}>
+          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto', textAlign: 'center', animation: 'zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+            <div className="status-icon-wrapper medication" style={{ margin: '0 auto 1.5rem auto', background: 'linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 100%)', color: '#ff2e93', boxShadow: '0 8px 20px rgba(217, 70, 239, 0.15)' }}>
               <ShieldCheck size={32} />
             </div>
             <h2 className="status-title">הגדרה הושלמה בהצלחה!</h2>
             <p className="status-subtitle" style={{ marginTop: '0.5rem' }}>היי {username}, קוד ההזמנה שלך מוכן:</p>
             
             <div className="invite-code-container">
-              <div className="invite-code-display">{inviteCode}</div>
-              <p className="status-helper-text" style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#6b21a8', maxW: '280px', margin: '1rem auto 0 auto' }}>
-                שתפי קוד זה עם {parentName} כדי שתוכל להתחבר ולקבל עדכונים.
+              <div className="invite-code-display" style={{ fontSize: '2.2rem', fontWeight: '900', color: '#4c1d95', background: '#f5f3ff', padding: '1rem', borderRadius: '18px', display: 'inline-block', margin: '1rem 0', width: '100%', maxWidth: '240px', textAlign: 'center', letterSpacing: '0.05em', border: '1px solid rgba(124, 58, 237, 0.15)' }}>{inviteCode}</div>
+              <p className="status-helper-text" style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#6b21a8', maxW: '280px', margin: '0.5rem auto 1.5rem auto', lineHeight: '1.4' }}>
+                שתפי קוד זה עם {parentName} כדי שתוכל להתחבר ולקבל עדכונים שוטפים.
               </p>
             </div>
 
-            <button onClick={handleWhatsAppShare} className="whatsapp-share-btn">
+            <button onClick={handleWhatsAppShare} className="whatsapp-share-btn" style={{ width: '100%', maxWidth: '300px', marginBottom: '1rem' }}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style={{ marginLeft: '8px' }}>
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.459h.005c6.56 0 11.9-5.336 11.902-11.893a11.821 11.821 0 00-3.48-8.413z" />
               </svg>
@@ -1737,12 +1729,12 @@ export default function App() {
             </button>
 
             {isSavingData ? (
-              <div className="save-loader-wrapper" style={{ marginTop: '1.5rem' }}>
+              <div className="save-loader-wrapper" style={{ marginTop: '1rem' }}>
                 <div className="save-spinner"></div>
                 <span className="save-text">שומר נתונים בשרת Supabase...</span>
               </div>
             ) : !isOnboardingSaved ? (
-              <button onClick={handleSaveOnboardingData} className="submit-btn" style={{ marginTop: '1.5rem', background: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)' }}>
+              <button onClick={handleSaveOnboardingData} className="submit-btn" style={{ marginTop: '1rem', background: 'linear-gradient(135deg, #a855f7 0%, #ff2e93 100%)' }}>
                 שמירת נתונים
               </button>
             ) : (
@@ -1757,15 +1749,20 @@ export default function App() {
             )}
           </div>
         ) : showParentLogin ? (
-          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto' }}>
-            <h2 className="status-title" style={{ textAlign: 'center', marginBottom: '0.5rem' }}>חיבור הורים</h2>
-            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#6b21a8', marginBottom: '1.5rem' }}>
-              הזיני את קוד ההזמנה בן 6 הספרות שקיבלת מהנערה כדי להתחבר למעקב.
+          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto', textAlign: 'center', animation: 'zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+            <div className="status-icon-wrapper medication" style={{ margin: '0 auto 1.5rem auto', background: 'rgba(16, 185, 129, 0.08)', color: '#10b981' }}>
+              <ShieldCheck size={32} />
+            </div>
+            <h2 className="status-title" style={{ marginBottom: '1rem' }}>חיבור הורים מפקחים</h2>
+            
+            <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.5', marginBottom: '1.5rem', textAlign: 'right' }}>
+              אפליקציית <span style={{ fontWeight: 'bold', color: '#6d28d9' }}>Care Cycle</span> מסייעת לבתך לנהל את שגרת הטיפול התרופתי שלה באופן עצמאי ובטוח, תוך שיתוף סטטוס הנטילה איתך בזמן אמת.
+              כדי להתחבר למעקב ולקבל התראות פוש שוטפות (כולל התראות על אי-נטילת תרופות בזמן), אנא הזיני את קוד ההזמנה בן 6 הספרות שיוצר באפליקציית הנערה.
             </p>
             
             <div className="form-fields">
               <div>
-                <label className="input-label">קוד הזמנה (6 ספרות)</label>
+                <label className="input-label" style={{ textAlign: 'right', display: 'block' }}>קוד הזמנה (6 ספרות)</label>
                 <input 
                   type="text" 
                   placeholder="הזיני קוד (לדוגמה: 123456)..."
@@ -1773,16 +1770,16 @@ export default function App() {
                   onChange={(e) => setParentCodeInput(e.target.value)}
                   onFocus={handleInputFocus}
                   className="form-input"
-                  style={{ textAlign: 'center', letterSpacing: '0.1em' }}
+                  style={{ textAlign: 'center', letterSpacing: '0.15em', fontSize: '1.1rem', fontWeight: 'bold' }}
                 />
-                {parentCodeError && <p className="parent-code-error">{parentCodeError}</p>}
+                {parentCodeError && <p className="parent-code-error" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.5rem', fontWeight: '700' }}>{parentCodeError}</p>}
               </div>
               
               <button onClick={handleParentLoginSubmit} className="submit-btn">
                 התחברי למעקב
               </button>
 
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                 <button onClick={() => { setRole('teen'); setOnboardingStep(0); }} className="back-to-start-btn">
                   חזרה למסך הראשי
                 </button>
