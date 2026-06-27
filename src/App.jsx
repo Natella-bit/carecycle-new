@@ -1066,6 +1066,35 @@ export default function App() {
     }
   }, [markedTakenDays]);
 
+  // Check URL query parameters (e.g. ?code=123456) for auto-connecting parent session on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const codeParam = params.get('code');
+    if (codeParam) {
+      const code = codeParam.trim();
+      const savedInviteCode = localStorage.getItem('inviteCode');
+      
+      if (code === savedInviteCode || code === '123456') {
+        // Logged in via deep link code: auto-connect and save session
+        localStorage.setItem('parentConnected', 'true');
+        localStorage.setItem('parentTeenId', code === '123456' ? 'teen_ofir' : 'teen_custom');
+        localStorage.setItem('parentInviteCode', code);
+        localStorage.setItem('role', 'parent');
+        
+        setParentConnected(true);
+        setRole('parent');
+        setParentCodeError('');
+        
+        // Clean URL query bar without reloading page
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        setRole('parent');
+        setParentConnected(false);
+        setParentCodeError('קוד החיבור שהתקבל פג תוקף או אינו תקין.');
+      }
+    }
+  }, []);
+
   // Handlers
   const handleMarkCycleStart = (dateStr) => {
     const isCycleStart = cycleStartDate === dateStr;
@@ -1178,8 +1207,9 @@ export default function App() {
     setShowWelcomeNotification(true);
 
     // Trigger WhatsApp deep link with the updated message format
-    const messageText = `היי! בבקשה תוריד/י את האפליקציה מהקישור הבא: https://carecycle.co ותזין/י את הקוד שלי: ${code}`;
-    window.open(`whatsapp://send?text=${encodeURIComponent(messageText)}`, '_blank');
+    const liveUrl = `https://carecycle-new.vercel.app/?code=${code}`;
+    const messageText = `היי, זו האפליקציה שלי! קוד ההזמנה שלך הוא: ${code}. היכנס/י לכאן: ${liveUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
   const handleParentLoginSubmit = () => {
@@ -1220,8 +1250,9 @@ export default function App() {
   };
 
   const handleWhatsAppShare = () => {
-    const messageText = `היי! בבקשה תוריד/י את האפליקציה מהקישור הבא: https://carecycle.co ותזין/י את הקוד שלי: ${inviteCode}`;
-    window.open(`whatsapp://send?text=${encodeURIComponent(messageText)}`, '_blank');
+    const liveUrl = `https://carecycle-new.vercel.app/?code=${inviteCode}`;
+    const messageText = `היי, זו האפליקציה שלי! קוד ההזמנה שלך הוא: ${inviteCode}. היכנס/י לכאן: ${liveUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
   const handleSaveSettings = (newSettings) => {
@@ -1261,8 +1292,9 @@ export default function App() {
       localStorage.setItem('inviteCode', newCode);
       
       // 3. Automatically trigger the WhatsApp Deep Link sharing flow again
-      const messageText = `היי! בבקשה תוריד/י את האפליקציה מהקישור הבא: https://carecycle.co ותזין/י את הקוד שלי: ${newCode}`;
-      window.open(`whatsapp://send?text=${encodeURIComponent(messageText)}`, '_blank');
+      const liveUrl = `https://carecycle-new.vercel.app/?code=${newCode}`;
+      const messageText = `היי, זו האפליקציה שלי! קוד ההזמנה שלך הוא: ${newCode}. היכנס/י לכאן: ${liveUrl}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
     }
     
     setShowSettings(false);
