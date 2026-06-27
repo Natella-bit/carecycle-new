@@ -1070,7 +1070,10 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const codeParam = params.get('code');
-    if (codeParam) {
+    const isLocalTeenOnboarded = localStorage.getItem('isOnboarded') === 'true';
+    
+    // ONLY auto-connect as parent if this device is NOT already onboarded as a teen
+    if (codeParam && !isLocalTeenOnboarded) {
       const code = codeParam.trim();
       const savedInviteCode = localStorage.getItem('inviteCode');
       
@@ -1436,9 +1439,13 @@ export default function App() {
             </button>
           )}
 
-          {isOnboarded && (
+          {(isOnboarded || parentConnected) && (
             <button 
-              onClick={() => setRole(role === 'teen' ? 'parent' : 'teen')}
+              onClick={() => {
+                const newRole = role === 'teen' ? 'parent' : 'teen';
+                setRole(newRole);
+                localStorage.setItem('role', newRole);
+              }}
               className={`role-badge ${role === 'teen' ? 'is-teen' : 'is-parent'}`}
             >
               <User size={16} />
