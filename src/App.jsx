@@ -411,22 +411,23 @@ function TeenView({
   
   const isMedicationTakenToday = markedTakenDays[todayStr] === true;
 
-  const isInTreatmentWindow = treatmentDay !== null && treatmentDay >= 0 && treatmentDay <= 9;
-  const isInWaitingWindow = !isInTreatmentWindow && cycleDay !== null && cycleDay >= 0 && cycleDay <= 13;
+  const isState1_Treatment = treatmentDay !== null && treatmentDay >= 0 && treatmentDay <= 9;
+  const isState3_Cycle = cycleDay !== null && cycleDay >= 0 && cycleDay <= 13;
+  const isState2_Waiting = treatmentDay !== null && treatmentDay >= 10;
 
   return (
     <div className="view-container">
 
       {/* Main Status Card */}
       <div className="glass-card status-card">
-        {isInTreatmentWindow ? (
+        {isState1_Treatment ? (
           <>
             <div className="status-icon-wrapper medication">
               <Pill size={32} strokeWidth={1.5} />
             </div>
-            <h2 className="status-title">שלב התרופה</h2>
-            <p className="status-subtitle">
-              יום {treatmentDay + 1} מתוך 10 לטיפול
+            <h2 className="status-title">שלב טיפול פעיל (יום {treatmentDay + 1} מתוך 10)</h2>
+            <p className="status-helper-text" style={{ fontSize: '0.9rem', color: '#6d28d9', marginTop: '0.25rem', fontWeight: '500' }}>
+              את כעת בטיפול תרופתי. זכרי לסמן בלוח השנה כל יום שבו נטלת את התרופה.
             </p>
             <div className="progress-bar-container">
               <div className="progress-bar" style={{ width: `${((treatmentDay + 1) / 10) * 100}%` }}></div>
@@ -461,19 +462,28 @@ function TeenView({
                )}
             </div>
           </>
-        ) : isInWaitingWindow ? (
+        ) : isState3_Cycle ? (
           <>
             <div className="status-icon-wrapper waiting">
               <CalendarIcon size={32} strokeWidth={1.5} />
             </div>
-            <h2 className="status-title">שלב ההמתנה</h2>
-            <p className="status-subtitle">
-              יום {cycleDay + 1} מתוך 14 למחזור
+            <h2 className="status-title">מחזור פעיל (יום {cycleDay + 1} מתוך 14)</h2>
+            <p className="status-helper-text" style={{ fontSize: '0.9rem', color: '#db2777', marginTop: '0.25rem', fontWeight: '500' }}>
+              המחזור החל. המערכת סופרת כעת 14 ימים עד לתחילת סבב הטיפול הבא
             </p>
             <div className="progress-bar-container" style={{ background: 'rgba(219, 39, 119, 0.1)' }}>
               <div className="progress-bar" style={{ width: `${((cycleDay + 1) / 14) * 100}%`, background: 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' }}></div>
             </div>
-            <p className="status-helper-text">הטיפול התרופתי יתחיל ביום ה-15</p>
+          </>
+        ) : isState2_Waiting ? (
+          <>
+            <div className="status-icon-wrapper waiting" style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%)', color: '#6366f1' }}>
+              <HeartPulse size={32} />
+            </div>
+            <h2 className="status-title">שלב המתנה למחזור</h2>
+            <p className="status-helper-text" style={{ fontSize: '0.9rem', color: '#4f46e5', marginTop: '0.25rem', fontWeight: '500', lineHeight: '1.45' }}>
+              סיימת את הטיפול התרופתי בהצלחה! כעת אנו בהמתנה. זכרי לסמן בלוח השנה ברגע שהמחזור מתחיל.
+            </p>
           </>
         ) : (
           <>
@@ -560,8 +570,10 @@ function ParentView({
   
   const isMedicationTakenToday = markedTakenDays[todayStr] === true;
   
-  const isInTreatmentWindow = treatmentDay !== null && treatmentDay >= 0 && treatmentDay <= 9;
-  const isInWaitingWindow = !isInTreatmentWindow && cycleDay !== null && cycleDay >= 0 && cycleDay <= 13;
+  const isState1_Treatment = treatmentDay !== null && treatmentDay >= 0 && treatmentDay <= 9;
+  const isState3_Cycle = cycleDay !== null && cycleDay >= 0 && cycleDay <= 13;
+  const isState2_Waiting = treatmentDay !== null && treatmentDay >= 10;
+  const isState0_Inactive = !isState1_Treatment && !isState3_Cycle && !isState2_Waiting;
 
   return (
     <div className="view-container">
@@ -584,17 +596,21 @@ function ParentView({
         <div className="info-rows">
           <div className="info-row">
             <span className="label">שלב במחזור:</span>
-            <span className="value" style={{ color: isInTreatmentWindow ? '#7c3aed' : isInWaitingWindow ? '#db2777' : '#64748b' }}>
-              {isInTreatmentWindow ? 'נטילת תרופה' : isInWaitingWindow ? 'המתנה (14 ימים)' : 'לא פעיל'}
+            <span className="value" style={{ color: isState1_Treatment ? '#7c3aed' : isState3_Cycle ? '#db2777' : isState2_Waiting ? '#6366f1' : '#64748b' }}>
+              {isState1_Treatment ? `טיפול פעיל (יום ${treatmentDay + 1} מתוך 10)` : 
+               isState3_Cycle ? `מחזור פעיל (יום ${cycleDay + 1} מתוך 14)` : 
+               isState2_Waiting ? 'המתנה למחזור (פוסט-טיפול)' : 'לא פעיל'}
             </span>
           </div>
-          {cycleDay !== null && cycleDay <= 23 && (
+
+          {isState3_Cycle && (
             <div className="info-row">
               <span className="label">יום נוכחי למחזור:</span>
-              <span className="value">יום {cycleDay + 1} מתוך 24</span>
+              <span className="value">יום {cycleDay + 1} מתוך 14</span>
             </div>
           )}
-          {isInTreatmentWindow && (
+
+          {isState1_Treatment && (
             <>
               <div className="info-row">
                 <span className="label">יום טיפול תרופתי:</span>
@@ -616,11 +632,18 @@ function ParentView({
               </div>
             </>
           )}
+
+          {isState2_Waiting && (
+            <div className="info-row">
+              <span className="label">סטטוס טיפול:</span>
+              <span className="value" style={{ color: '#10b981' }}>הושלם בהצלחה (10 ימים) 🎉</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Escalated Missing Logs Warning for Parent */}
-      {isInTreatmentWindow && !isMedicationTakenToday && (
+      {isState1_Treatment && !isMedicationTakenToday && (
         isPastEscalationTime ? (
           <div className="parent-warn-banner" style={{ border: '2px solid #ef4444', background: '#fef2f2', boxShadow: '0 8px 25px rgba(239, 68, 68, 0.15)' }}>
             <AlertCircle className="warn-icon" size={24} style={{ color: '#ef4444' }} />
@@ -817,6 +840,7 @@ export default function App() {
       });
     } else {
       setCycleStartDate(dateStr);
+      setTreatmentStartDate(null); // Clear old treatment to reset cycle flow!
       setAlertDismissed(false);
     }
   };
