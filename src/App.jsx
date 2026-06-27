@@ -15,7 +15,9 @@ import {
   Activity,
   Droplet,
   Bell,
-  Edit3
+  Edit3,
+  Hourglass,
+  Heart
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import './App.css';
@@ -585,12 +587,12 @@ function TeenView({
           </>
         ) : isState3_Cycle ? (
           <>
-            <div className="status-icon-wrapper waiting">
-              <CalendarIcon size={32} strokeWidth={1.5} />
+            <div className="status-icon-wrapper waiting" style={{ color: '#db2777', background: 'rgba(219, 39, 119, 0.08)' }}>
+              <Droplet size={32} strokeWidth={1.5} />
             </div>
             <h2 className="status-title">מחזור פעיל (יום {cycleDay + 1} מתוך 14)</h2>
             <p className="status-helper-text" style={{ fontSize: '0.9rem', color: '#db2777', marginTop: '0.25rem', fontWeight: '500' }}>
-              המחזור החל. המערכת סופרת כעת 14 ימים עד לתחילת סבב הטיפול הבא
+              המערכת סופרת כעת 14 ימים מקבלת המחזור לטיפול הבא. התראת הפסקת מחזור תופיע ביום ה-15.
             </p>
             <div className="progress-bar-container" style={{ background: 'rgba(219, 39, 119, 0.1)' }}>
               <div className="progress-bar" style={{ width: `${((cycleDay + 1) / 14) * 100}%`, background: 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' }}></div>
@@ -599,20 +601,20 @@ function TeenView({
         ) : isState2_Waiting ? (
           <>
             <div className="status-icon-wrapper waiting" style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%)', color: '#6366f1' }}>
-              <HeartPulse size={32} />
+              <Hourglass size={32} strokeWidth={1.5} />
             </div>
             <h2 className="status-title">שלב המתנה למחזור</h2>
             <p className="status-helper-text" style={{ fontSize: '0.9rem', color: '#4f46e5', marginTop: '0.25rem', fontWeight: '500', lineHeight: '1.45' }}>
-              סיימת את הטיפול התרופתי בהצלחה! כעת אנו בהמתנה. זכרי לסמן בלוח השנה ברגע שהמחזור מתחיל.
+              סיימת את הטיפול בהצלחה! כעת אנו בהמתנה לקבלת המחזור. ברגע קבלתו, לחצי על יום תחילת המחזור בלוח השנה.
             </p>
           </>
         ) : (
           <>
-            <div className="status-icon-wrapper inactive">
-              <HeartPulse size={32} />
+            <div className="status-icon-wrapper inactive" style={{ background: '#f1f5f9', color: '#94a3b8' }}>
+              <Heart size={32} strokeWidth={1.5} />
             </div>
-            <h2 className="status-title">אין טיפול/מחזור פעיל</h2>
-            <p className="status-helper-text inactive">
+            <h2 className="status-title" style={{ color: '#64748b' }}>אין טיפול/מחזור פעיל</h2>
+            <p className="status-helper-text inactive" style={{ color: '#94a3b8' }}>
               לחצי על יום בלוח השנה וסמני את תאריך תחילת המחזור או תחילת הטיפול כדי להתחיל מעקב.
             </p>
           </>
@@ -724,73 +726,66 @@ function ParentView({
         </p>
       </div>
 
-      <div className="glass-card parent-status-card">
-        <div className="parent-section-title">
-          <Activity size={20} className="parent-section-icon" />
-          <h3>סטטוס נוכחי</h3>
-        </div>
-        
-        <div className="info-rows">
-          <div className="info-row">
-            <span className="label">שלב במחזור:</span>
-            <span className="value" style={{ color: isState1_Treatment ? '#7c3aed' : isState3_Cycle ? '#db2777' : isState2_Waiting ? '#6366f1' : '#64748b' }}>
-              {isState1_Treatment ? `שלב טיפול פעיל (יום ${treatmentDay + 1} מתוך 10)` : 
-               isState3_Cycle ? `מחזור פעיל (יום ${cycleDay + 1} מתוך 14)` : 
-               isState2_Waiting ? 'שלב המתנה למחזור' : 'אין טיפול/מחזור פעיל'}
-            </span>
-          </div>
-
-          {isState3_Cycle && (
-            <div className="info-row">
-              <span className="label">יום נוכחי למחזור:</span>
-              <span className="value">יום {cycleDay + 1} מתוך 14</span>
+      <div className="glass-card status-card">
+        {isState1_Treatment ? (
+          <>
+            <div className="status-icon-wrapper medication">
+              <Pill size={32} strokeWidth={1.5} />
             </div>
-          )}
-
-          {isState1_Treatment && (
-            <>
-              <div className="info-row">
-                <span className="label">יום טיפול תרופתי:</span>
-                <span className="value">יום {treatmentDay + 1} מתוך 10</span>
-              </div>
-              <div className="info-row">
-                <span className="label">שם התרופה:</span>
-                <span className="value">{drugName || 'טרם הוזן'}</span>
-              </div>
-              <div className="info-row">
-                <span className="label">זמני תזכורת יומיים:</span>
-                <span className="value">{reminderTimes.join(', ') || 'לא הוגדר'}</span>
-              </div>
-              <div className="info-row">
-                <span className="label">סטטוס תרופה היום:</span>
-                <span className="value" style={{ color: isMedicationTakenToday ? '#10b981' : '#ef4444' }}>
-                  {isMedicationTakenToday ? 'נלקח בהצלחה' : 'טרם נלקח'}
-                </span>
-              </div>
-            </>
-          )}
-
-          {isState2_Waiting && (
-            <div className="info-row">
-              <span className="label">סטטוס טיפול:</span>
-              <span className="value" style={{ color: '#10b981' }}>הושלם בהצלחה (10 ימים) 🎉</span>
+            <h2 className="status-title">שלב טיפול פעיל (יום {treatmentDay + 1} מתוך 10)</h2>
+            <p className="status-helper-text" style={{ fontSize: '0.9rem', color: '#6d28d9', marginTop: '0.25rem', fontWeight: '500' }}>
+              הבת נמצאת כעת בטיפול תרופתי.
+            </p>
+            <div className="progress-bar-container">
+              <div className="progress-bar" style={{ width: `${((treatmentDay + 1) / 10) * 100}%` }}></div>
             </div>
-          )}
-        </div>
-
-        {isState1_Treatment && (
-          <div className="parent-progress-container">
-            <span className="parent-progress-label">התקדמות סבב הטיפול (10 ימים):</span>
-            <div className="parent-progress-circles">
-              {getTreatmentCircles().map((isTaken, index) => (
-                <div 
-                  key={index} 
-                  className={`progress-circle ${isTaken ? 'filled' : 'empty'}`}
-                  title={isTaken ? `יום ${index + 1}: נלקח` : `יום ${index + 1}: טרם נלקח`}
-                />
-              ))}
+            
+            <div className="parent-progress-container" style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(124, 58, 237, 0.1)' }}>
+              <span className="parent-progress-label">התקדמות סבב הטיפול (10 ימים):</span>
+              <div className="parent-progress-circles" style={{ marginTop: '0.5rem' }}>
+                {getTreatmentCircles().map((isTaken, index) => (
+                  <div 
+                    key={index} 
+                    className={`progress-circle ${isTaken ? 'filled' : 'empty'}`}
+                    title={isTaken ? `יום ${index + 1}: נלקח` : `יום ${index + 1}: טרם נלקח`}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          </>
+        ) : isState3_Cycle ? (
+          <>
+            <div className="status-icon-wrapper waiting" style={{ color: '#db2777', background: 'rgba(219, 39, 119, 0.08)' }}>
+              <Droplet size={32} strokeWidth={1.5} />
+            </div>
+            <h2 className="status-title">מחזור פעיל (יום {cycleDay + 1} מתוך 14)</h2>
+            <p className="status-helper-text" style={{ fontSize: '0.9rem', color: '#db2777', marginTop: '0.25rem', fontWeight: '500' }}>
+              המערכת סופרת כעת 14 ימים מקבלת המחזור לטיפול הבא. התראת הפסקת מחזור תופיע ביום ה-15.
+            </p>
+            <div className="progress-bar-container" style={{ background: 'rgba(219, 39, 119, 0.1)' }}>
+              <div className="progress-bar" style={{ width: `${((cycleDay + 1) / 14) * 100}%`, background: 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' }}></div>
+            </div>
+          </>
+        ) : isState2_Waiting ? (
+          <>
+            <div className="status-icon-wrapper waiting" style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%)', color: '#6366f1' }}>
+              <Hourglass size={32} strokeWidth={1.5} />
+            </div>
+            <h2 className="status-title">שלב המתנה למחזור</h2>
+            <p className="status-helper-text" style={{ fontSize: '0.9rem', color: '#4f46e5', marginTop: '0.25rem', fontWeight: '500', lineHeight: '1.45' }}>
+              סיימת את הטיפול בהצלחה! כעת אנו בהמתנה לקבלת המחזור. ברגע קבלתו, לחצי על יום תחילת המחזור בלוח השנה.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="status-icon-wrapper inactive" style={{ background: '#f1f5f9', color: '#94a3b8' }}>
+              <Heart size={32} strokeWidth={1.5} />
+            </div>
+            <h2 className="status-title" style={{ color: '#64748b' }}>אין טיפול/מחזור פעיל</h2>
+            <p className="status-helper-text inactive" style={{ color: '#94a3b8' }}>
+              לחצי על יום בלוח השנה וסמני את תאריך תחילת המחזור או תחילת הטיפול כדי להתחיל מעקב.
+            </p>
+          </>
         )}
       </div>
 
@@ -1051,6 +1046,25 @@ export default function App() {
       }
     }
   }, [role, parentConnected]);
+
+  // Sync calendar and treatment states to localStorage immediately when they change
+  useEffect(() => {
+    if (cycleStartDate !== undefined) {
+      localStorage.setItem('cycleStartDate', cycleStartDate === null ? 'null' : cycleStartDate);
+    }
+  }, [cycleStartDate]);
+
+  useEffect(() => {
+    if (treatmentStartDate !== undefined) {
+      localStorage.setItem('treatmentStartDate', treatmentStartDate === null ? 'null' : treatmentStartDate);
+    }
+  }, [treatmentStartDate]);
+
+  useEffect(() => {
+    if (markedTakenDays !== undefined) {
+      localStorage.setItem('markedTakenDays', JSON.stringify(markedTakenDays));
+    }
+  }, [markedTakenDays]);
 
   // Handlers
   const handleMarkCycleStart = (dateStr) => {
