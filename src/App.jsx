@@ -1614,7 +1614,7 @@ export default function App() {
                   className="form-input"
                 />
               </div>
-              <button onClick={() => setOnboardingStep(2)} className="submit-btn">
+              <button onClick={() => setOnboardingStep(3)} className="submit-btn">
                 המשך
               </button>
             </div>
