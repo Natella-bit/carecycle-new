@@ -36,6 +36,20 @@ const diffInDays = (startStr, endStr) => {
   return Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
 };
 
+const addMonths = (dateStr, months) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + months);
+  return getLocalDateString(d);
+};
+
+const subtractDays = (dateStr, days) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() - days);
+  return getLocalDateString(d);
+};
+
 // --- Standalone React Components (Defined outside App scope to fix input focus bugs) ---
 
 function NotificationToast({ show, onClose, title, desc }) {
@@ -56,7 +70,7 @@ function NotificationToast({ show, onClose, title, desc }) {
   );
 }
 
-function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage }) {
+function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage, purchaseDate, setPurchaseDate, todayStr }) {
   if (!show) return null;
 
   const handleInputFocus = (e) => {
@@ -95,6 +109,17 @@ function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage
               value={dosage} 
               onChange={(e) => setDosage(e.target.value)}
               onFocus={handleInputFocus}
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="input-label">תאריך רכישת התרופה / ניפוק המרשם</label>
+            <input 
+              type="date" 
+              value={purchaseDate || ''} 
+              onChange={(e) => setPurchaseDate(e.target.value)}
+              max={todayStr}
+              required
               className="form-input"
             />
           </div>
@@ -686,10 +711,11 @@ export default function App() {
   // Date which was just marked as taken, triggers local spin animation
   const [justMarkedDate, setJustMarkedDate] = useState(null);
 
-  // Refill details
-  const demoRefillStart = new Date();
-  demoRefillStart.setDate(today.getDate() - 115); // 5 days left until 120 days
-  const [refillDate, setRefillDate] = useState(getLocalDateString(demoRefillStart));
+  // Prescription Purchase Date (Anchor Date)
+  // Prefill with exactly 115 days ago so today is the notification warning date!
+  const demoPurchaseStart = new Date();
+  demoPurchaseStart.setDate(today.getDate() - 115);
+  const [purchaseDate, setPurchaseDate] = useState(getLocalDateString(demoPurchaseStart));
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDateForAction, setSelectedDateForAction] = useState(null);
@@ -698,6 +724,7 @@ export default function App() {
   const [alertDismissed, setAlertDismissed] = useState(false);
   const [teenAlertDismissed, setTeenAlertDismissed] = useState(false);
   const [parentEscalationDismissed, setParentEscalationDismissed] = useState(false);
+  const [refillAlertDismissed, setRefillAlertDismissed] = useState(false);
 
   // Undo Confirmation dialog state
   const [confirmUndo, setConfirmUndo] = useState(null);
@@ -706,16 +733,20 @@ export default function App() {
   useEffect(() => {
     setTeenAlertDismissed(false);
     setParentEscalationDismissed(false);
+    setRefillAlertDismissed(false);
   }, [simulatedTime, isTimeOverridden]);
 
   // Derived state
   const cycleDay = cycleStartDate ? diffInDays(cycleStartDate, todayStr) : null;
   const treatmentDay = treatmentStartDate ? diffInDays(treatmentStartDate, todayStr) : null;
 
-  // Refill math
-  const daysSinceRefill = refillDate ? diffInDays(refillDate, todayStr) : null;
-  const daysUntilRefill = daysSinceRefill !== null ? Math.max(0, 120 - daysSinceRefill) : null;
-  const showRefillAlert = daysUntilRefill !== null && daysUntilRefill <= 7;
+  // Prescription renewal math:
+  // Expiration date: exactly 4 months after purchaseDate
+  // Notification date: exactly 7 days before expirationDate
+  const expirationDate = purchaseDate ? addMonths(purchaseDate, 4) : null;
+  const refillNotificationDate = expirationDate ? subtractDays(expirationDate, 7) : null;
+  const daysUntilRefill = (todayStr && expirationDate) ? diffInDays(todayStr, expirationDate) : null;
+  const showRefillAlert = daysUntilRefill !== null && daysUntilRefill <= 7 && daysUntilRefill >= 0;
 
   // Automated Day 15 Alert logic
   const isTargetAlertDay = cycleDay === 14;
@@ -753,6 +784,11 @@ export default function App() {
 
   const shouldShowTeenReminder = isNotificationWindowActive && isPillNotTakenToday && isPastReminderTime;
   const shouldShowParentEscalation = isNotificationWindowActive && isPillNotTakenToday && isPastEscalationTime && parentConnected;
+
+  // Prescription renewal alert trigger (standard time 10:00 AM = 600 minutes)
+  const isRefillNotificationToday = todayStr === refillNotificationDate;
+  const isPastRefillNotificationTime = currentMin >= 600;
+  const shouldShowRefillNotification = isRefillNotificationToday && isPastRefillNotificationTime && (role === 'teen' || (role === 'parent' && parentConnected));
 
   // Handlers
   const handleMarkCycleStart = (dateStr) => {
@@ -825,16 +861,19 @@ export default function App() {
   };
 
   const handleLogRefill = () => {
-    const isRefillToday = refillDate === todayStr;
+    const isRefillToday = purchaseDate === todayStr;
     if (isRefillToday) {
       setConfirmUndo({
         message: 'האם את בטוחה שברצונך לבטל את סימון חידוש המרשם?',
         onConfirm: () => {
-          setRefillDate(null);
+          // Revert to demo purchase date (115 days ago)
+          const demoPurchase = new Date();
+          demoPurchase.setDate(today.getDate() - 115);
+          setPurchaseDate(getLocalDateString(demoPurchase));
         }
       });
     } else {
-      setRefillDate(todayStr);
+      setPurchaseDate(todayStr);
     }
   };
 
@@ -843,8 +882,8 @@ export default function App() {
       alert('אנא הזיני שם משתמש');
       return;
     }
-    if (!age.trim() || !drugName.trim() || !parentName.trim() || !reminderTime) {
-      alert('אנא מלאי את כל השדות בטופס');
+    if (!age.trim() || !drugName.trim() || !parentName.trim() || !reminderTime || !purchaseDate) {
+      alert('אנא מלאי את כל השדות בטופס כולל תאריך רכישת התרופה');
       return;
     }
     // Generate Invite Code
@@ -866,6 +905,10 @@ export default function App() {
         setReminderTime('08:00');
         setInviteCode('123456');
         setIsOnboarded(true);
+        // Prefill purchase date for the test to 115 days ago
+        const demoPurchase = new Date();
+        demoPurchase.setDate(today.getDate() - 115);
+        setPurchaseDate(getLocalDateString(demoPurchase));
         // Place treatmentStartDate to yesterday so today is Day 2 of treatment for test!
         const yesterday = new Date();
         yesterday.setDate(today.getDate() - 1);
@@ -941,7 +984,15 @@ export default function App() {
         desc={`היי, עברה שעה מזמן התזכורת של ${username} והיא טרם דיווחה על נטילת התרופה (${drugName}).`}
       />
 
-      {/* 4. Undo Action Confirmation Dialog Modal */}
+      {/* 4. Prescription Expiration Push Notification */}
+      <NotificationToast 
+        show={shouldShowRefillNotification && !refillAlertDismissed}
+        onClose={() => setRefillAlertDismissed(true)}
+        title="התרעת חידוש מרשם"
+        desc={`שימי לב! המרשם לתרופה ${drugName} עומד להסתיים בעוד שבוע. זה הזמן לדאוג לחידוש המרשם מול הרופא.`}
+      />
+
+      {/* 5. Undo Action Confirmation Dialog Modal */}
       <ConfirmUndoModal 
         show={confirmUndo !== null}
         onClose={() => setConfirmUndo(null)}
@@ -1110,6 +1161,17 @@ export default function App() {
                   className="form-input"
                 />
               </div>
+              <div>
+                <label className="input-label">תאריך רכישת התרופה / ניפוק המרשם</label>
+                <input 
+                  type="date" 
+                  value={purchaseDate || ''}
+                  onChange={(e) => setPurchaseDate(e.target.value)}
+                  max={todayStr}
+                  required
+                  className="form-input"
+                />
+              </div>
               <button onClick={handleOnboardingSubmit} className="submit-btn">
                 סיימי הגדרה וצרי קוד
               </button>
@@ -1218,6 +1280,9 @@ export default function App() {
         setDrugName={setDrugName}
         dosage={dosage}
         setDosage={setDosage}
+        purchaseDate={purchaseDate}
+        setPurchaseDate={setPurchaseDate}
+        todayStr={todayStr}
       />
 
       {/* Action-Based Calendar Day Click Options Modal */}
