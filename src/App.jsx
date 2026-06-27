@@ -70,7 +70,28 @@ function NotificationToast({ show, onClose, title, desc }) {
   );
 }
 
-function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage, purchaseDate, setPurchaseDate, todayStr, inviteCode }) {
+function SettingsModal({ 
+  show, 
+  onClose, 
+  username, 
+  setUsername, 
+  age, 
+  setAge, 
+  drugName, 
+  setDrugName, 
+  dosage, 
+  setDosage, 
+  frequency, 
+  setFrequency, 
+  reminderTimes, 
+  setReminderTimes, 
+  parentName, 
+  setParentName, 
+  purchaseDate, 
+  setPurchaseDate, 
+  todayStr, 
+  inviteCode 
+}) {
   if (!show) return null;
 
   const handleInputFocus = (e) => {
@@ -82,19 +103,38 @@ function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header">
-          <h2 className="modal-title">הגדרת תרופה ומינון</h2>
+          <h2 className="modal-title">פרופיל והגדרות טיפול</h2>
           <button onClick={onClose} className="close-btn">
             <X size={24} />
           </button>
         </div>
         <div className="form-fields">
           <div>
-            <label className="input-label">שם התרופה (הקלידי בעצמך)</label>
+            <label className="input-label">שם משתמש</label>
             <input 
               type="text" 
-              placeholder="לדוגמה: גלולות למניעת הריון..."
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)}
+              onFocus={handleInputFocus}
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="input-label">גיל</label>
+            <input 
+              type="number" 
+              value={age} 
+              onChange={(e) => setAge(e.target.value)}
+              onFocus={handleInputFocus}
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="input-label">שם התרופה</label>
+            <input 
+              type="text" 
               value={drugName} 
               onChange={(e) => setDrugName(e.target.value)}
               onFocus={handleInputFocus}
@@ -102,12 +142,21 @@ function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage
             />
           </div>
           <div>
-            <label className="input-label">מינון יומי</label>
+            <label className="input-label">מינון</label>
             <input 
               type="text" 
-              placeholder="לדוגמה: כדור אחד ביום"
               value={dosage} 
               onChange={(e) => setDosage(e.target.value)}
+              onFocus={handleInputFocus}
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="input-label">שם ההורה המפקח</label>
+            <input 
+              type="text" 
+              value={parentName} 
+              onChange={(e) => setParentName(e.target.value)}
               onFocus={handleInputFocus}
               className="form-input"
             />
@@ -119,11 +168,54 @@ function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage
               value={purchaseDate || ''} 
               onChange={(e) => setPurchaseDate(e.target.value)}
               max={todayStr}
-              required
               className="form-input"
             />
           </div>
           
+          <div>
+            <label className="input-label">תדירות נטילה ביום</label>
+            <select 
+              value={frequency} 
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setFrequency(val);
+                setReminderTimes(prev => {
+                  const arr = [...prev];
+                  if (arr.length < val) {
+                    while (arr.length < val) arr.push('08:00');
+                  } else if (arr.length > val) {
+                    arr.length = val;
+                  }
+                  return arr;
+                });
+              }}
+              className="form-input"
+            >
+              <option value={1}>פעם אחת ביום</option>
+              <option value={2}>פעמיים ביום</option>
+              <option value={3}>3 פעמים ביום</option>
+            </select>
+          </div>
+
+          {reminderTimes.map((time, idx) => (
+            <div key={idx}>
+              <label className="input-label">שעת תזכורת {idx + 1}</label>
+              <input 
+                type="time" 
+                value={time}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setReminderTimes(prev => {
+                    const arr = [...prev];
+                    arr[idx] = val;
+                    return arr;
+                  });
+                }}
+                className="form-input"
+              />
+            </div>
+          ))}
+
           {inviteCode && (
             <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(124, 58, 237, 0.08)', borderRadius: '12px', border: '1px dashed rgba(124, 58, 237, 0.25)', textAlign: 'center' }}>
               <span style={{ fontSize: '0.8rem', color: '#6d28d9', fontWeight: '700' }}>קוד החיבור שלך להורה: </span>
@@ -131,7 +223,7 @@ function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage
             </div>
           )}
 
-          <button onClick={onClose} className="submit-btn">
+          <button onClick={onClose} className="submit-btn" style={{ marginTop: '1rem' }}>
             שמירת שינויים
           </button>
         </div>
@@ -637,8 +729,8 @@ function ParentView({
                 <span className="value">{drugName || 'טרם הוזן'}</span>
               </div>
               <div className="info-row">
-                <span className="label">זמן תזכורת יומי:</span>
-                <span className="value">{reminderTime || 'לא הוגדר'}</span>
+                <span className="label">זמני תזכורת יומיים:</span>
+                <span className="value">{reminderTimes.join(', ') || 'לא הוגדר'}</span>
               </div>
               <div className="info-row">
                 <span className="label">סטטוס תרופה היום:</span>
@@ -681,7 +773,7 @@ function ParentView({
             <div className="warn-content">
               <h4 style={{ color: '#991b1b', fontWeight: '900' }}>התראת אי-דיווח תרופה (הסלמה)</h4>
               <p style={{ color: '#7f1d1d', fontSize: '0.8rem' }}>
-                עברה שעה מזמן התזכורת המתוכנן ({reminderTime}) ועדיין לא התקבל דיווח מ-{username || 'הנערה'} על נטילת התרופה. כדאי ליצור קשר בהקדם.
+                עברה שעה מזמן התזכורת המתוכנן ({reminderTimes.join(', ')}) ועדיין לא התקבל דיווח מ-{username || 'הנערה'} על נטילת התרופה. כדאי ליצור קשר בהקדם.
               </p>
             </div>
           </div>
@@ -691,7 +783,7 @@ function ParentView({
             <div className="warn-content">
               <h4 style={{ color: '#78350f' }}>חלף זמן התזכורת</h4>
               <p style={{ color: '#b45309' }}>
-                זמן התזכורת של {username || 'הנערה'} חלף ב-{reminderTime} אך התרופה טרם סומנה כנלקחת. הסלמה להורה תישלח כעבור שעה מזמן התזכורת.
+                זמן התזכורת של {username || 'הנערה'} חלף ב-{reminderTimes.join(', ')} אך התרופה טרם סומנה כנלקחת. הסלמה להורה תישלח כעבור שעה מזמן התזכורת.
               </p>
             </div>
           </div>
@@ -701,7 +793,7 @@ function ParentView({
             <div className="warn-content">
               <h4 style={{ color: '#334155' }}>דיווח תרופה פעיל</h4>
               <p style={{ color: '#475569' }}>
-                התרופה טרם סומנה כנלקחת להיום. התזכורת היומית מוגדרת לשעה {reminderTime}.
+                התרופה טרם סומנה כנלקחת להיום. זמני התזכורת היומיים מוגדרים ל-{reminderTimes.join(', ')}.
               </p>
             </div>
           </div>
@@ -730,23 +822,37 @@ function ParentView({
 // --- Main App Component ---
 
 export default function App() {
-  const [role, setRole] = useState('teen'); // 'teen' | 'parent'
+  const [role, setRole] = useState(() => localStorage.getItem('role') || 'teen');
   const [showSettings, setShowSettings] = useState(false);
   
   // Onboarding Flow & User Details
-  const [isOnboarded, setIsOnboarded] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(0); // 0: Startup Selection, 1: Username Input, 2: Setup Form, 3: Success Code Screen
+  const [isOnboarded, setIsOnboarded] = useState(() => localStorage.getItem('isOnboarded') === 'true');
+  const [onboardingStep, setOnboardingStep] = useState(() => {
+    const saved = localStorage.getItem('isOnboarded') === 'true';
+    return saved ? 4 : 0; // Bypass onboarding if already onboarded (route directly to Main Calendar Dashboard Step 4)
+  });
   
-  const [username, setUsername] = useState('');
-  const [age, setAge] = useState('');
-  const [parentName, setParentName] = useState('');
-  const [reminderTime, setReminderTime] = useState('08:00');
-  const [inviteCode, setInviteCode] = useState('');
-  const [drugName, setDrugName] = useState('גלולות Care');
-  const [dosage, setDosage] = useState('כדור אחד ביום');
+  const [username, setUsername] = useState(() => localStorage.getItem('username') || '');
+  const [age, setAge] = useState(() => localStorage.getItem('age') || '');
+  const [parentName, setParentName] = useState(() => localStorage.getItem('parentName') || '');
+  
+  // Frequency & Reminder Times
+  const [frequency, setFrequency] = useState(() => Number(localStorage.getItem('frequency')) || 1);
+  const [reminderTimes, setReminderTimes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('reminderTimes');
+      return saved ? JSON.parse(saved) : ['08:00'];
+    } catch {
+      return ['08:00'];
+    }
+  });
+
+  const [inviteCode, setInviteCode] = useState(() => localStorage.getItem('inviteCode') || '');
+  const [drugName, setDrugName] = useState(() => localStorage.getItem('drugName') || 'גלולות Care');
+  const [dosage, setDosage] = useState(() => localStorage.getItem('dosage') || 'כדור אחד ביום');
 
   // Parent Connection
-  const [parentConnected, setParentConnected] = useState(false);
+  const [parentConnected, setParentConnected] = useState(() => localStorage.getItem('parentConnected') === 'true');
   const [parentCodeInput, setParentCodeInput] = useState('');
   const [parentCodeError, setParentCodeError] = useState('');
 
@@ -757,11 +863,6 @@ export default function App() {
 
   const today = new Date();
   const todayStr = getLocalDateString(today);
-
-  // Initialize demo: Cycle start 14 days ago (makes today the target Day 15 Alert!)
-  const demoCycleStart = new Date();
-  demoCycleStart.setDate(today.getDate() - 14);
-  const [cycleStartDate, setCycleStartDate] = useState(getLocalDateString(demoCycleStart));
 
   // Manually configured Treatment Start Date (set to null initially for demo/manual choice)
   const [treatmentStartDate, setTreatmentStartDate] = useState(null);
@@ -836,11 +937,18 @@ export default function App() {
   };
 
   const currentMin = getCurrentTimeMinutes();
-  const [remH, remM] = reminderTime.split(':').map(Number);
-  const reminderMin = remH * 60 + remM;
+  
+  const isPastReminderTime = reminderTimes.some(time => {
+    if (!time) return false;
+    const [h, m] = time.split(':').map(Number);
+    return currentMin >= (h * 60 + m);
+  });
 
-  const isPastReminderTime = currentMin >= reminderMin;
-  const isPastEscalationTime = currentMin >= reminderMin + 60;
+  const isPastEscalationTime = reminderTimes.some(time => {
+    if (!time) return false;
+    const [h, m] = time.split(':').map(Number);
+    return currentMin >= (h * 60 + m + 60);
+  });
 
   // Notification Trigger conditions:
   // For Days 2 to 10 of treatment (treatmentDay from index 1 to 9), if pill not taken yet
@@ -950,7 +1058,7 @@ export default function App() {
       alert('אנא הזיני שם משתמש');
       return;
     }
-    if (!age.trim() || !drugName.trim() || !parentName.trim() || !reminderTime || !purchaseDate) {
+    if (!age.trim() || !drugName.trim() || !parentName.trim() || !reminderTimes.length || !purchaseDate) {
       alert('אנא מלאי את כל השדות בטופס כולל תאריך רכישת התרופה');
       return;
     }
@@ -979,7 +1087,8 @@ export default function App() {
         setAge('16');
         setDrugName('יסמין');
         setParentName('מיכל');
-        setReminderTime('08:00');
+        setFrequency(1);
+        setReminderTimes(['08:00']);
         setInviteCode('123456');
         setIsOnboarded(true);
         // Prefill purchase date for the test to 115 days ago
@@ -1246,14 +1355,47 @@ export default function App() {
                 />
               </div>
               <div>
-                <label className="input-label">שעת תזכורת יומית</label>
-                <input 
-                  type="time" 
-                  value={reminderTime}
-                  onChange={(e) => setReminderTime(e.target.value)}
+                <label className="input-label">תדירות נטילה ביום</label>
+                <select 
+                  value={frequency} 
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setFrequency(val);
+                    setReminderTimes(prev => {
+                      const arr = [...prev];
+                      if (arr.length < val) {
+                        while (arr.length < val) arr.push('08:00');
+                      } else if (arr.length > val) {
+                        arr.length = val;
+                      }
+                      return arr;
+                    });
+                  }}
                   className="form-input"
-                />
+                >
+                  <option value={1}>פעם אחת ביום</option>
+                  <option value={2}>פעמיים ביום</option>
+                  <option value={3}>3 פעמים ביום</option>
+                </select>
               </div>
+              {reminderTimes.map((time, idx) => (
+                <div key={idx}>
+                  <label className="input-label">שעת תזכורת {idx + 1}</label>
+                  <input 
+                    type="time" 
+                    value={time}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setReminderTimes(prev => {
+                        const arr = [...prev];
+                        arr[idx] = val;
+                        return arr;
+                      });
+                    }}
+                    className="form-input"
+                  />
+                </div>
+              ))}
               <div>
                 <label className="input-label">תאריך רכישת התרופה / ניפוק המרשם</label>
                 <input 
@@ -1358,7 +1500,7 @@ export default function App() {
             daysUntilRefill={daysUntilRefill}
             showRefillAlert={showRefillAlert}
             username={username}
-            reminderTime={reminderTime}
+            reminderTimes={reminderTimes}
             isPastEscalationTime={isPastEscalationTime}
             isPastReminderTime={isPastReminderTime}
           />
@@ -1369,10 +1511,20 @@ export default function App() {
       <SettingsModal 
         show={showSettings}
         onClose={() => setShowSettings(false)}
+        username={username}
+        setUsername={setUsername}
+        age={age}
+        setAge={setAge}
         drugName={drugName}
         setDrugName={setDrugName}
         dosage={dosage}
         setDosage={setDosage}
+        frequency={frequency}
+        setFrequency={setFrequency}
+        reminderTimes={reminderTimes}
+        setReminderTimes={setReminderTimes}
+        parentName={parentName}
+        setParentName={setParentName}
         purchaseDate={purchaseDate}
         setPurchaseDate={setPurchaseDate}
         todayStr={todayStr}
