@@ -1290,7 +1290,7 @@ export default function App() {
         show={role === 'teen' && showWelcomeNotification}
         onClose={() => setShowWelcomeNotification(false)}
         title="ברוכה הבאה! 🎉"
-        desc={`היי ${username}! איזה כיף שהצטרפת. יומן הטיפול שלך מוכן, ויחד נעשה את זה הכי פשוט שיש.`}
+        desc={`היי ${username}, יומן המעקב שלך הוגדר בהצלחה. יחד נהפוך את הטיפול להרגל פשוט וקל.`}
       />
 
       {/* 2. Teen Real-time Medication Push Notification */}
