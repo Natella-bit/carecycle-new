@@ -852,7 +852,9 @@ export default function App() {
   const [dosage, setDosage] = useState(() => localStorage.getItem('dosage') || 'כדור אחד ביום');
 
   // Parent Connection
-  const [parentConnected, setParentConnected] = useState(() => localStorage.getItem('parentConnected') === 'true');
+  const [parentConnected, setParentConnected] = useState(() => {
+    return localStorage.getItem('parentConnected') === 'true' && !!localStorage.getItem('parentTeenId');
+  });
   const [parentCodeInput, setParentCodeInput] = useState('');
   const [parentCodeError, setParentCodeError] = useState('');
 
@@ -983,6 +985,43 @@ export default function App() {
   const isPastRefillNotificationTime = currentMin >= 600;
   const shouldShowRefillNotification = isRefillNotificationToday && isPastRefillNotificationTime && (role === 'teen' || (role === 'parent' && parentConnected));
 
+  // Relational Database Sync Listener for Parent role:
+  // Listens/polls for teen's active state if connected via Parent Invite Code
+  useEffect(() => {
+    if (role === 'parent' && parentConnected) {
+      const savedTeenId = localStorage.getItem('parentTeenId');
+      if (savedTeenId) {
+        const fetchTeenStateFromDatabase = () => {
+          // Retrieve the teen's current state from the simulated database rows (localStorage)
+          const savedMarked = localStorage.getItem('markedTakenDays');
+          const savedTreatment = localStorage.getItem('treatmentStartDate');
+          const savedCycle = localStorage.getItem('cycleStartDate');
+          const savedPurchase = localStorage.getItem('purchaseDate');
+          const savedDrug = localStorage.getItem('drugName');
+          const savedDosage = localStorage.getItem('dosage');
+          const savedUser = localStorage.getItem('username');
+          const savedReminders = localStorage.getItem('reminderTimes');
+          
+          if (savedMarked) setMarkedTakenDays(JSON.parse(savedMarked));
+          if (savedTreatment) setTreatmentStartDate(savedTreatment === 'null' ? null : savedTreatment);
+          if (savedCycle) setCycleStartDate(savedCycle === 'null' ? null : savedCycle);
+          if (savedPurchase) setPurchaseDate(savedPurchase);
+          if (savedDrug) setDrugName(savedDrug);
+          if (savedDosage) setDosage(savedDosage);
+          if (savedUser) setUsername(savedUser);
+          if (savedReminders) setReminderTimes(JSON.parse(savedReminders));
+        };
+
+        // Initial fetch on mount / route change
+        fetchTeenStateFromDatabase();
+
+        // Relational synchronization subscription (updates immediately if teen clicks 'Taken')
+        const subscriptionInterval = setInterval(fetchTeenStateFromDatabase, 1000);
+        return () => clearInterval(subscriptionInterval);
+      }
+    }
+  }, [role, parentConnected]);
+
   // Handlers
   const handleMarkCycleStart = (dateStr) => {
     const isCycleStart = cycleStartDate === dateStr;
@@ -1095,7 +1134,7 @@ export default function App() {
 
     // Trigger WhatsApp deep link with the updated message format
     const messageText = `היי! בבקשה תוריד/י את האפליקציה מהקישור הבא: https://carecycle.co ותזין/י את הקוד שלי: ${code}`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`, '_blank');
+    window.open(`whatsapp://send?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
   const handleParentLoginSubmit = () => {
@@ -1120,6 +1159,13 @@ export default function App() {
         yesterday.setDate(today.getDate() - 1);
         setTreatmentStartDate(getLocalDateString(yesterday));
       }
+      
+      // Save Parent Connection state, relational Teen_ID and Invite_Code in localStorage
+      localStorage.setItem('parentConnected', 'true');
+      localStorage.setItem('parentTeenId', code === '123456' ? 'teen_ofir' : 'teen_custom');
+      localStorage.setItem('parentInviteCode', code);
+      localStorage.setItem('role', 'parent');
+
       setParentConnected(true);
       setRole('parent');
       setParentCodeError('');
@@ -1129,18 +1175,8 @@ export default function App() {
   };
 
   const handleWhatsAppShare = () => {
-    const messageText = `היי! הורדתי את האפליקציה למעקב תרופתי. בבקשה תוריד/י אותה גם ותזין/י את קוד החיבור שלי כדי שנוכל להיות מסונכרנים. הקוד שלי הוא: ${inviteCode}`;
-    
-    if (navigator.share) {
-      navigator.share({
-        title: 'קוד חיבור Care Cycle',
-        text: messageText,
-      }).catch(() => {
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`, '_blank');
-      });
-    } else {
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`, '_blank');
-    }
+    const messageText = `היי! בבקשה תוריד/י את האפליקציה מהקישור הבא: https://carecycle.co ותזין/י את הקוד שלי: ${inviteCode}`;
+    window.open(`whatsapp://send?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
   const handleInputFocus = (e) => {
