@@ -575,6 +575,22 @@ function ParentView({
   const isState2_Waiting = treatmentDay !== null && treatmentDay >= 10;
   const isState0_Inactive = !isState1_Treatment && !isState3_Cycle && !isState2_Waiting;
 
+  const getTreatmentCircles = () => {
+    const circles = [];
+    if (!treatmentStartDate) return circles;
+    const start = new Date(treatmentStartDate);
+    for (let i = 0; i < 10; i++) {
+      const current = new Date(start);
+      current.setDate(start.getDate() + i);
+      const y = current.getFullYear();
+      const m = (current.getMonth() + 1).toString().padStart(2, '0');
+      const d = current.getDate().toString().padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+      circles.push(markedTakenDays[dateStr] === true);
+    }
+    return circles;
+  };
+
   return (
     <div className="view-container">
       <div className="glass-card parent-header-card">
@@ -597,9 +613,9 @@ function ParentView({
           <div className="info-row">
             <span className="label">שלב במחזור:</span>
             <span className="value" style={{ color: isState1_Treatment ? '#7c3aed' : isState3_Cycle ? '#db2777' : isState2_Waiting ? '#6366f1' : '#64748b' }}>
-              {isState1_Treatment ? `טיפול פעיל (יום ${treatmentDay + 1} מתוך 10)` : 
+              {isState1_Treatment ? `שלב טיפול פעיל (יום ${treatmentDay + 1} מתוך 10)` : 
                isState3_Cycle ? `מחזור פעיל (יום ${cycleDay + 1} מתוך 14)` : 
-               isState2_Waiting ? 'המתנה למחזור (פוסט-טיפול)' : 'לא פעיל'}
+               isState2_Waiting ? 'שלב המתנה למחזור' : 'אין טיפול/מחזור פעיל'}
             </span>
           </div>
 
@@ -640,6 +656,21 @@ function ParentView({
             </div>
           )}
         </div>
+
+        {isState1_Treatment && (
+          <div className="parent-progress-container">
+            <span className="parent-progress-label">התקדמות סבב הטיפול (10 ימים):</span>
+            <div className="parent-progress-circles">
+              {getTreatmentCircles().map((isTaken, index) => (
+                <div 
+                  key={index} 
+                  className={`progress-circle ${isTaken ? 'filled' : 'empty'}`}
+                  title={isTaken ? `יום ${index + 1}: נלקח` : `יום ${index + 1}: טרם נלקח`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Escalated Missing Logs Warning for Parent */}
@@ -684,11 +715,10 @@ function ParentView({
            <h3>סטטוס מרשמים</h3>
         </div>
         
-        <div className="info-rows">
-          <div className="info-row">
-            <span className="label">ימים שנותרו לחידוש:</span>
-            <span className="value" style={{ color: showRefillAlert ? '#ef4444' : '#1e1b4b' }}>
-              {daysUntilRefill !== null ? `${daysUntilRefill} ימים` : 'לא ידוע'}
+        <div className="info-rows" style={{ background: 'rgba(255, 255, 255, 0.4)' }}>
+          <div className="info-row" style={{ justifyContent: 'center', padding: '0.5rem 0', borderBottom: 'none' }}>
+            <span className="value" style={{ fontSize: '1.05rem', color: showRefillAlert ? '#ef4444' : '#4c1d95', fontWeight: '800' }}>
+              {daysUntilRefill !== null ? `נותרו ${daysUntilRefill} ימים לחידוש המרשם` : 'לא הוגדר תאריך רכישה'}
             </span>
           </div>
         </div>
@@ -743,10 +773,8 @@ export default function App() {
   const [justMarkedDate, setJustMarkedDate] = useState(null);
 
   // Prescription Purchase Date (Anchor Date)
-  // Prefill with exactly 115 days ago so today is the notification warning date!
-  const demoPurchaseStart = new Date();
-  demoPurchaseStart.setDate(today.getDate() - 115);
-  const [purchaseDate, setPurchaseDate] = useState(getLocalDateString(demoPurchaseStart));
+  // Prefill with today's date so that the popup renewal notification is not triggered automatically on launch
+  const [purchaseDate, setPurchaseDate] = useState(getLocalDateString(today));
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDateForAction, setSelectedDateForAction] = useState(null);
@@ -1120,7 +1148,7 @@ export default function App() {
               className={`role-badge ${role === 'teen' ? 'is-teen' : 'is-parent'}`}
             >
               <User size={16} />
-              <span>{role === 'teen' ? (username || 'נערה') : 'הורה'}</span>
+              <span>{role === 'teen' ? (username || 'נערה') : (parentName || 'הורה')}</span>
             </button>
           )}
         </div>
