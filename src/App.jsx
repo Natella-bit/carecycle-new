@@ -1180,35 +1180,21 @@ export default function App() {
     }
   }, [markedTakenDays]);
 
-  // Check URL query parameters (e.g. ?code=123456) for auto-connecting parent session on load
+  // Check URL query parameters (e.g. ?code=123456) for pre-filling parent connection screen on load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const codeParam = params.get('code');
     const isLocalTeenOnboarded = localStorage.getItem('isOnboarded') === 'true';
     
-    // ONLY auto-connect as parent if this device is NOT already onboarded as a teen
+    // ONLY pre-fill as parent if this device is NOT already onboarded as a teen
     if (codeParam && !isLocalTeenOnboarded) {
       const code = codeParam.trim();
-      const savedInviteCode = localStorage.getItem('inviteCode');
+      setRole('parent');
+      setParentCodeInput(code);
+      setParentConnected(false);
       
-      if (code === savedInviteCode || code === '123456') {
-        // Logged in via deep link code: auto-connect and save session
-        localStorage.setItem('parentConnected', 'true');
-        localStorage.setItem('parentTeenId', code === '123456' ? 'teen_ofir' : 'teen_custom');
-        localStorage.setItem('parentInviteCode', code);
-        localStorage.setItem('role', 'parent');
-        
-        setParentConnected(true);
-        setRole('parent');
-        setParentCodeError('');
-        
-        // Clean URL query bar without reloading page
-        window.history.replaceState({}, document.title, window.location.pathname);
-      } else {
-        setRole('parent');
-        setParentConnected(false);
-        setParentCodeError('קוד החיבור שהתקבל פג תוקף או אינו תקין.');
-      }
+      // Clean URL query bar without reloading page
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
