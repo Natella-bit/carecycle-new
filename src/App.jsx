@@ -85,6 +85,76 @@ function NotificationToast({ show, onClose, title, desc }) {
   );
 }
 
+function AdminPanelModal({ show, onClose, onResetApp, onResetInviteCode, onTriggerTestAlert, username, inviteCode, parentConnected }) {
+  if (!show) return null;
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 100 }}>
+      <div className="modal-content" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="modal-header">
+          <h2 className="modal-title" style={{ color: '#dc2626' }}>לוח מנהל מערכת (Admin)</h2>
+          <button onClick={onClose} className="close-btn">
+            <X size={24} />
+          </button>
+        </div>
+        
+        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+          <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+            <h4 style={{ color: '#1e293b', marginBottom: '0.5rem', fontWeight: '800' }}>📊 נתונים פעילים במערכת:</h4>
+            <ul style={{ margin: 0, paddingRight: '1rem', listStyleType: 'disc', fontSize: '0.85rem', color: '#475569', lineHeight: '1.6' }}>
+              <li>שם משתמש: <strong>{username || 'לא הוגדר'}</strong></li>
+              <li>קוד חיבור להורה: <strong>{inviteCode || 'לא הוגדר'}</strong></li>
+              <li>סטטוס חיבור הורה: <strong>{parentConnected ? 'מחובר' : 'מנותק'}</strong></li>
+            </ul>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button 
+              onClick={() => { onResetInviteCode(); }} 
+              className="submit-btn" 
+              style={{ background: '#7c3aed', margin: 0 }}
+            >
+              איפוס קוד הזמנה (מחולל קוד חדש)
+            </button>
+
+            <button 
+              onClick={() => {
+                if (window.confirm('האם את בטוחה שברצונך לאפס לחלוטין את כל נתוני האפליקציה ולהתחיל מחדש?')) {
+                  onResetApp();
+                }
+              }} 
+              className="submit-btn" 
+              style={{ background: '#ef4444', margin: 0 }}
+            >
+              איפוס והתחלה מחדש (Clear Session)
+            </button>
+
+            <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '0.5rem', paddingTop: '1rem' }}>
+              <h4 style={{ color: '#1e293b', marginBottom: '0.5rem', fontWeight: '800' }}>🛠️ סימולציית התראות:</h4>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  onClick={() => { onTriggerTestAlert('welcome'); onClose(); }} 
+                  className="submit-btn" 
+                  style={{ background: '#10b981', margin: 0, flex: 1, padding: '0.5rem', fontSize: '0.8rem' }}
+                >
+                  התראת ברוכה הבאה
+                </button>
+                <button 
+                  onClick={() => { onTriggerTestAlert('refill'); onClose(); }} 
+                  className="submit-btn" 
+                  style={{ background: '#f59e0b', margin: 0, flex: 1, padding: '0.5rem', fontSize: '0.8rem' }}
+                >
+                  התראת חידוש מרשם
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsModal({ 
   show, 
   onClose, 
@@ -888,6 +958,9 @@ export default function App() {
   const [role, setRole] = useState(() => localStorage.getItem('role') || 'teen');
   const [showSettings, setShowSettings] = useState(false);
   const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
+  const [headerClickCount, setHeaderClickCount] = useState(0);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showSaveSuccessToast, setShowSaveSuccessToast] = useState(false);
   
   // Onboarding Flow & User Details
   const [isOnboarded, setIsOnboarded] = useState(() => localStorage.getItem('isOnboarded') === 'true');
@@ -1317,6 +1390,50 @@ export default function App() {
     }
   };
 
+  const handleResetApp = () => {
+    localStorage.clear();
+    window.location.reload();
+  };
+
+  const handleResetInviteCode = () => {
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+    setInviteCode(newCode);
+    localStorage.setItem('inviteCode', newCode);
+    
+    // Disconnect parent
+    setParentConnected(false);
+    localStorage.removeItem('parentConnected');
+    localStorage.removeItem('parentTeenId');
+    localStorage.removeItem('parentInviteCode');
+    
+    alert(`קוד הזמנה חדש נוצר בהצלחה: ${newCode}. ההורה הקודם נותק.`);
+  };
+
+  const handleTriggerTestAlert = (type) => {
+    if (type === 'welcome') {
+      setShowWelcomeNotification(true);
+    } else if (type === 'refill') {
+      setRefillAlertDismissed(false);
+      const targetDate = new Date();
+      targetDate.setMonth(targetDate.getMonth() - 4);
+      targetDate.setDate(targetDate.getDate() + 7);
+      setPurchaseDate(getLocalDateString(targetDate));
+      localStorage.setItem('purchaseDate', getLocalDateString(targetDate));
+      alert('התראת חידוש מרשם סומלצה בהצלחה! היא תופיע כעת בראש לוח הבקרה.');
+    }
+  };
+
+  const handleTaglineClick = () => {
+    setHeaderClickCount(prev => {
+      const nextCount = prev + 1;
+      if (nextCount >= 5) {
+        setShowAdminPanel(true);
+        return 0;
+      }
+      return nextCount;
+    });
+  };
+
   const handleWhatsAppShare = () => {
     const liveUrl = `https://carecycle-new.vercel.app/?code=${inviteCode}`;
     const messageText = `היי, זו האפליקציה שלי! קוד ההזמנה שלך הוא: ${inviteCode}. היכנס/י לכאן: ${liveUrl}`;
@@ -1366,6 +1483,10 @@ export default function App() {
     }
     
     setShowSettings(false);
+    setShowSaveSuccessToast(true);
+    setTimeout(() => {
+      setShowSaveSuccessToast(false);
+    }, 3000);
   };
 
   const handleInputFocus = (e) => {
@@ -1373,6 +1494,10 @@ export default function App() {
       e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 300);
   };
+
+  const ua = navigator.userAgent.toLowerCase();
+  const isiOS = ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod');
+  const isAndroid = ua.includes('android');
 
   // Helper: determine if onboarding forms should display
   const showLandingPage = !isOnboarded && role === 'teen' && onboardingStep === 0;
@@ -1456,11 +1581,31 @@ export default function App() {
         message={confirmUndo ? confirmUndo.message : ''}
       />
 
+      {/* Admin Panel Modal */}
+      <AdminPanelModal 
+        show={showAdminPanel}
+        onClose={() => setShowAdminPanel(false)}
+        onResetApp={handleResetApp}
+        onResetInviteCode={handleResetInviteCode}
+        onTriggerTestAlert={handleTriggerTestAlert}
+        username={username}
+        inviteCode={inviteCode}
+        parentConnected={parentConnected}
+      />
+
+      {/* Save Settings Success Toast */}
+      <NotificationToast 
+        show={showSaveSuccessToast}
+        onClose={() => setShowSaveSuccessToast(false)}
+        title="נשמר בהצלחה! 💾"
+        desc="שינויי הפרופיל והגדרות הטיפול נשמרו בהצלחה בשרת Supabase!"
+      />
+
       {/* Header Section */}
       <header className="app-header">
         <div className="brand-info">
           <h1 className="brand-name">Care cycle</h1>
-          <p className="brand-tagline">מעקב אישי חכם</p>
+          <p className="brand-tagline" onClick={handleTaglineClick} style={{ cursor: 'pointer' }}>מעקב אישי חכם</p>
         </div>
         
         <div className="header-controls">
@@ -1560,21 +1705,55 @@ export default function App() {
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: '6px' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
-                התקנה מהירה למסך הבית (PWA)
+                {isiOS ? 'התקנה מהירה ל-iPhone (Safari)' : isAndroid ? 'התקנה מהירה ל-Android (Chrome)' : 'התקנה מהירה למסך הבית (PWA)'}
               </h3>
               <div className="install-steps">
-                <div className="install-step">
-                  <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>1</span>
-                  <span className="step-text">לחצי על כפתור השיתוף בדפדפן (סמל <span style={{ fontWeight: 'bold' }}>שיתוף</span> 📤 בתחתית ה-iPhone או תפריט 3 הנקודות ב-Android).</span>
-                </div>
-                <div className="install-step">
-                  <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>2</span>
-                  <span className="step-text">בחרי באפשרות <span style={{ fontWeight: 'bold' }}>"הוספה למסך הבית"</span> (Add to Home Screen) מתוך הרשימה.</span>
-                </div>
-                <div className="install-step">
-                  <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>3</span>
-                  <span className="step-text">אשרי את השם. האפליקציה תותקן כאייקון עצמאי המותאם לנייד ללא צורך בחנות האפליקציות!</span>
-                </div>
+                {isiOS ? (
+                  <>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>1</span>
+                      <span className="step-text">לחצי על כפתור השיתוף בתחתית המסך בספארי (סמל <span style={{ fontWeight: 'bold' }}>שיתוף</span> 📤).</span>
+                    </div>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>2</span>
+                      <span className="step-text">גללי מטה ובחרי באפשרות <span style={{ fontWeight: 'bold' }}>"הוספה למסך הבית"</span> (Add to Home Screen).</span>
+                    </div>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>3</span>
+                      <span className="step-text">אשרי את השם. האפליקציה תותקן כאייקון עצמאי מותאם לנייד ללא צורך בחנות האפליקציות!</span>
+                    </div>
+                  </>
+                ) : isAndroid ? (
+                  <>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>1</span>
+                      <span className="step-text">לחצי על תפריט שלוש הנקודות בפינה העליונה של דפדפן כרום.</span>
+                    </div>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>2</span>
+                      <span className="step-text">בחרי באפשרות <span style={{ fontWeight: 'bold' }}>"התקנת אפליקציה"</span> או <span style={{ fontWeight: 'bold' }}>"הוספה למסך הבית"</span>.</span>
+                    </div>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>3</span>
+                      <span className="step-text">אשרי את ההתקנה. האפליקציה תופיע מיד במסך הבית שלך כאפליקציה חלקה לגישה מהירה!</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>1</span>
+                      <span className="step-text">לחצי על כפתור השיתוף בדפדפן (סמל <span style={{ fontWeight: 'bold' }}>שיתוף</span> 📤 בתחתית ה-iPhone או תפריט 3 הנקודות ב-Android).</span>
+                    </div>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>2</span>
+                      <span className="step-text">בחרי באפשרות <span style={{ fontWeight: 'bold' }}>"הוספה למסך הבית"</span> (Add to Home Screen) מתוך הרשימה.</span>
+                    </div>
+                    <div className="install-step">
+                      <span className="step-number" style={{ background: '#fdf2f8', color: '#ff2e93', border: '1px solid rgba(255, 46, 147, 0.2)' }}>3</span>
+                      <span className="step-text">אשרי את השם. האפליקציה תותקן כאייקון עצמאי המותאם לנייד ללא צורך בחנות האפליקציות!</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
