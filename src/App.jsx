@@ -50,6 +50,19 @@ const subtractDays = (dateStr, days) => {
   return getLocalDateString(d);
 };
 
+const getReminderLabel = (idx, total) => {
+  if (total === 1) return 'שעת תזכורת יומית';
+  if (total === 2) {
+    return idx === 0 ? 'תזכורת בוקר' : 'תזכורת ערב';
+  }
+  if (total === 3) {
+    if (idx === 0) return 'תזכורת בוקר';
+    if (idx === 1) return 'תזכורת צהריים';
+    return 'תזכורת ערב';
+  }
+  return `שעת תזכורת ${idx + 1}`;
+};
+
 // --- Standalone React Components (Defined outside App scope to fix input focus bugs) ---
 
 function NotificationToast({ show, onClose, title, desc }) {
@@ -74,31 +87,47 @@ function SettingsModal({
   show, 
   onClose, 
   username, 
-  setUsername, 
   age, 
-  setAge, 
   drugName, 
-  setDrugName, 
   dosage, 
-  setDosage, 
   frequency, 
-  setFrequency, 
   reminderTimes, 
-  setReminderTimes, 
   parentName, 
-  setParentName, 
   purchaseDate, 
-  setPurchaseDate, 
   todayStr, 
-  inviteCode 
+  inviteCode,
+  onSave
 }) {
   if (!show) return null;
+
+  // Local state variables initialized from props
+  const [localUsername, setLocalUsername] = useState(username);
+  const [localAge, setLocalAge] = useState(age);
+  const [localDrugName, setLocalDrugName] = useState(drugName);
+  const [localDosage, setLocalDosage] = useState(dosage);
+  const [localFrequency, setLocalFrequency] = useState(frequency);
+  const [localReminderTimes, setLocalReminderTimes] = useState(reminderTimes);
+  const [localParentName, setLocalParentName] = useState(parentName);
+  const [localPurchaseDate, setLocalPurchaseDate] = useState(purchaseDate);
 
   const handleInputFocus = (e) => {
     // Wait for the virtual keyboard to fully pop up and resize the viewport
     setTimeout(() => {
       e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 300);
+  };
+
+  const handleSave = () => {
+    onSave({
+      username: localUsername,
+      age: localAge,
+      drugName: localDrugName,
+      dosage: localDosage,
+      frequency: localFrequency,
+      reminderTimes: localReminderTimes,
+      parentName: localParentName,
+      purchaseDate: localPurchaseDate
+    });
   };
 
   return (
@@ -115,8 +144,8 @@ function SettingsModal({
             <label className="input-label">שם משתמש</label>
             <input 
               type="text" 
-              value={username} 
-              onChange={(e) => setUsername(e.target.value)}
+              value={localUsername} 
+              onChange={(e) => setLocalUsername(e.target.value)}
               onFocus={handleInputFocus}
               className="form-input"
             />
@@ -125,8 +154,8 @@ function SettingsModal({
             <label className="input-label">גיל</label>
             <input 
               type="number" 
-              value={age} 
-              onChange={(e) => setAge(e.target.value)}
+              value={localAge} 
+              onChange={(e) => setLocalAge(e.target.value)}
               onFocus={handleInputFocus}
               className="form-input"
             />
@@ -135,8 +164,8 @@ function SettingsModal({
             <label className="input-label">שם התרופה</label>
             <input 
               type="text" 
-              value={drugName} 
-              onChange={(e) => setDrugName(e.target.value)}
+              value={localDrugName} 
+              onChange={(e) => setLocalDrugName(e.target.value)}
               onFocus={handleInputFocus}
               className="form-input"
             />
@@ -145,8 +174,8 @@ function SettingsModal({
             <label className="input-label">מינון</label>
             <input 
               type="text" 
-              value={dosage} 
-              onChange={(e) => setDosage(e.target.value)}
+              value={localDosage} 
+              onChange={(e) => setLocalDosage(e.target.value)}
               onFocus={handleInputFocus}
               className="form-input"
             />
@@ -155,8 +184,8 @@ function SettingsModal({
             <label className="input-label">שם ההורה המפקח</label>
             <input 
               type="text" 
-              value={parentName} 
-              onChange={(e) => setParentName(e.target.value)}
+              value={localParentName} 
+              onChange={(e) => setLocalParentName(e.target.value)}
               onFocus={handleInputFocus}
               className="form-input"
             />
@@ -165,8 +194,8 @@ function SettingsModal({
             <label className="input-label">תאריך רכישת התרופה / ניפוק המרשם</label>
             <input 
               type="date" 
-              value={purchaseDate || ''} 
-              onChange={(e) => setPurchaseDate(e.target.value)}
+              value={localPurchaseDate || ''} 
+              onChange={(e) => setLocalPurchaseDate(e.target.value)}
               max={todayStr}
               className="form-input"
             />
@@ -175,11 +204,11 @@ function SettingsModal({
           <div>
             <label className="input-label">תדירות נטילה ביום</label>
             <select 
-              value={frequency} 
+              value={localFrequency} 
               onChange={(e) => {
                 const val = Number(e.target.value);
-                setFrequency(val);
-                setReminderTimes(prev => {
+                setLocalFrequency(val);
+                setLocalReminderTimes(prev => {
                   const arr = [...prev];
                   if (arr.length < val) {
                     while (arr.length < val) arr.push('08:00');
@@ -197,15 +226,15 @@ function SettingsModal({
             </select>
           </div>
 
-          {reminderTimes.map((time, idx) => (
+          {localReminderTimes.map((time, idx) => (
             <div key={idx}>
-              <label className="input-label">שעת תזכורת {idx + 1}</label>
+              <label className="input-label">{getReminderLabel(idx, localFrequency)}</label>
               <input 
                 type="time" 
                 value={time}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setReminderTimes(prev => {
+                  setLocalReminderTimes(prev => {
                     const arr = [...prev];
                     arr[idx] = val;
                     return arr;
@@ -223,7 +252,7 @@ function SettingsModal({
             </div>
           )}
 
-          <button onClick={onClose} className="submit-btn" style={{ marginTop: '1rem' }}>
+          <button onClick={handleSave} className="submit-btn" style={{ marginTop: '1rem' }}>
             שמירת שינויים
           </button>
         </div>
@@ -824,6 +853,7 @@ function ParentView({
 export default function App() {
   const [role, setRole] = useState(() => localStorage.getItem('role') || 'teen');
   const [showSettings, setShowSettings] = useState(false);
+  const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
   
   // Onboarding Flow & User Details
   const [isOnboarded, setIsOnboarded] = useState(() => localStorage.getItem('isOnboarded') === 'true');
@@ -1131,6 +1161,7 @@ export default function App() {
     // Set onboarded and route directly to Main Calendar Screen
     setIsOnboarded(true);
     setOnboardingStep(4);
+    setShowWelcomeNotification(true);
 
     // Trigger WhatsApp deep link with the updated message format
     const messageText = `היי! בבקשה תוריד/י את האפליקציה מהקישור הבא: https://carecycle.co ותזין/י את הקוד שלי: ${code}`;
@@ -1179,6 +1210,50 @@ export default function App() {
     window.open(`whatsapp://send?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
+  const handleSaveSettings = (newSettings) => {
+    // Detect if parentName has changed
+    const parentChanged = newSettings.parentName.trim() !== parentName.trim();
+    
+    // Save new values to state
+    setUsername(newSettings.username);
+    setAge(newSettings.age);
+    setDrugName(newSettings.drugName);
+    setDosage(newSettings.dosage);
+    setFrequency(newSettings.frequency);
+    setReminderTimes(newSettings.reminderTimes);
+    setParentName(newSettings.parentName);
+    setPurchaseDate(newSettings.purchaseDate);
+
+    // Persist immediately to localStorage
+    localStorage.setItem('username', newSettings.username);
+    localStorage.setItem('age', newSettings.age);
+    localStorage.setItem('drugName', newSettings.drugName);
+    localStorage.setItem('dosage', newSettings.dosage);
+    localStorage.setItem('frequency', newSettings.frequency.toString());
+    localStorage.setItem('reminderTimes', JSON.stringify(newSettings.reminderTimes));
+    localStorage.setItem('parentName', newSettings.parentName);
+    localStorage.setItem('purchaseDate', newSettings.purchaseDate);
+    
+    if (parentChanged) {
+      // 1. Disconnect the previous parent's connection/ID
+      setParentConnected(false);
+      localStorage.removeItem('parentConnected');
+      localStorage.removeItem('parentTeenId');
+      localStorage.removeItem('parentInviteCode');
+      
+      // 2. Generate a new 6-digit Invite Code
+      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+      setInviteCode(newCode);
+      localStorage.setItem('inviteCode', newCode);
+      
+      // 3. Automatically trigger the WhatsApp Deep Link sharing flow again
+      const messageText = `היי! בבקשה תוריד/י את האפליקציה מהקישור הבא: https://carecycle.co ותזין/י את הקוד שלי: ${newCode}`;
+      window.open(`whatsapp://send?text=${encodeURIComponent(messageText)}`, '_blank');
+    }
+    
+    setShowSettings(false);
+  };
+
   const handleInputFocus = (e) => {
     setTimeout(() => {
       e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1208,6 +1283,14 @@ export default function App() {
             [todayStr]: true
           }));
         }}
+      />
+
+      {/* 0. Welcome Push Notification */}
+      <NotificationToast 
+        show={role === 'teen' && showWelcomeNotification}
+        onClose={() => setShowWelcomeNotification(false)}
+        title="ברוכה הבאה! 🎉"
+        desc={`היי ${username}! איזה כיף שהצטרפת. יומן הטיפול שלך מוכן, ויחד נעשה את זה הכי פשוט שיש.`}
       />
 
       {/* 2. Teen Real-time Medication Push Notification */}
@@ -1436,7 +1519,7 @@ export default function App() {
               </div>
               {reminderTimes.map((time, idx) => (
                 <div key={idx}>
-                  <label className="input-label">שעת תזכורת {idx + 1}</label>
+                  <label className="input-label">{getReminderLabel(idx, frequency)}</label>
                   <input 
                     type="time" 
                     value={time}
@@ -1568,23 +1651,16 @@ export default function App() {
         show={showSettings}
         onClose={() => setShowSettings(false)}
         username={username}
-        setUsername={setUsername}
         age={age}
-        setAge={setAge}
         drugName={drugName}
-        setDrugName={setDrugName}
         dosage={dosage}
-        setDosage={setDosage}
         frequency={frequency}
-        setFrequency={setFrequency}
         reminderTimes={reminderTimes}
-        setReminderTimes={setReminderTimes}
         parentName={parentName}
-        setParentName={setParentName}
         purchaseDate={purchaseDate}
-        setPurchaseDate={setPurchaseDate}
         todayStr={todayStr}
         inviteCode={inviteCode}
+        onSave={handleSaveSettings}
       />
 
       {/* Action-Based Calendar Day Click Options Modal */}
