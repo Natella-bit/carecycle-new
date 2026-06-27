@@ -1366,3 +1366,36 @@
   100% { transform: scale(1.05); }
 }
 
+.whatsapp-share-btn {
+  background-color: #25d366;
+  color: #ffffff;
+  border: none;
+  padding: 0.85rem;
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.25);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.whatsapp-share-btn:hover {
+  background-color: #20ba59;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.35);
+}
+
+.whatsapp-share-btn:active {
+  transform: translateY(0);
+}
+
+.whatsapp-share-btn svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
