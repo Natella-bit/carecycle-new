@@ -516,7 +516,11 @@ function ParentView({
   todayStr, 
   drugName, 
   daysUntilRefill, 
-  showRefillAlert 
+  showRefillAlert,
+  username,
+  reminderTime,
+  isPastEscalationTime,
+  isPastReminderTime
 }) {
   const cycleDay = cycleStartDate ? diffInDays(cycleStartDate, todayStr) : null;
   const treatmentDay = treatmentStartDate ? diffInDays(treatmentStartDate, todayStr) : null;
@@ -532,7 +536,7 @@ function ParentView({
         <div className="parent-avatar-badge">
           <ShieldCheck size={32} />
         </div>
-        <h2 className="parent-title">מעקב הורים</h2>
+        <h2 className="parent-title">מעקב הורים - {username || 'נערה'}</h2>
         <p className="parent-desc">
           צפייה בלבד. המידע מתעדכן על ידי הנערה לשמירה על פרטיותה ועצמאותה.
         </p>
@@ -568,6 +572,10 @@ function ParentView({
                 <span className="value">{drugName || 'טרם הוזן'}</span>
               </div>
               <div className="info-row">
+                <span className="label">זמן תזכורת יומי:</span>
+                <span className="value">{reminderTime || 'לא הוגדר'}</span>
+              </div>
+              <div className="info-row">
                 <span className="label">סטטוס תרופה היום:</span>
                 <span className="value" style={{ color: isMedicationTakenToday ? '#10b981' : '#ef4444' }}>
                   {isMedicationTakenToday ? 'נלקח בהצלחה' : 'טרם נלקח'}
@@ -578,17 +586,39 @@ function ParentView({
         </div>
       </div>
 
-      {/* Missing Logs Warning for Parent */}
+      {/* Escalated Missing Logs Warning for Parent */}
       {isInTreatmentWindow && !isMedicationTakenToday && (
-        <div className="parent-warn-banner" style={{ border: '1px solid #fca5a5', background: '#fef2f2' }}>
-          <AlertCircle className="warn-icon" size={20} style={{ color: '#ef4444' }} />
-          <div className="warn-content">
-            <h4 style={{ color: '#991b1b' }}>תזכורת תרופה להורה</h4>
-            <p style={{ color: '#7f1d1d' }}>
-              הנערה נמצאת בשלב נטילת התרופה אך טרם סימנה שנלקחה היום. כדאי לבדוק או להזכיר בעדינות.
-            </p>
+        isPastEscalationTime ? (
+          <div className="parent-warn-banner" style={{ border: '2px solid #ef4444', background: '#fef2f2', boxShadow: '0 8px 25px rgba(239, 68, 68, 0.15)' }}>
+            <AlertCircle className="warn-icon" size={24} style={{ color: '#ef4444' }} />
+            <div className="warn-content">
+              <h4 style={{ color: '#991b1b', fontWeight: '900' }}>התראת אי-דיווח תרופה (הסלמה)</h4>
+              <p style={{ color: '#7f1d1d', fontSize: '0.8rem' }}>
+                עברה שעה מזמן התזכורת המתוכנן ({reminderTime}) ועדיין לא התקבל דיווח מ-{username || 'הנערה'} על נטילת התרופה. כדאי ליצור קשר בהקדם.
+              </p>
+            </div>
           </div>
-        </div>
+        ) : isPastReminderTime ? (
+          <div className="parent-warn-banner" style={{ border: '1px solid #f59e0b', background: '#fffbeb' }}>
+            <AlertCircle className="warn-icon" size={20} style={{ color: '#d97706' }} />
+            <div className="warn-content">
+              <h4 style={{ color: '#78350f' }}>חלף זמן התזכורת</h4>
+              <p style={{ color: '#b45309' }}>
+                זמן התזכורת של {username || 'הנערה'} חלף ב-{reminderTime} אך התרופה טרם סומנה כנלקחת. הסלמה להורה תישלח כעבור שעה מזמן התזכורת.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="parent-warn-banner" style={{ border: '1px solid #cbd5e1', background: '#f8fafc' }}>
+            <AlertCircle className="warn-icon" size={20} style={{ color: '#64748b' }} />
+            <div className="warn-content">
+              <h4 style={{ color: '#334155' }}>דיווח תרופה פעיל</h4>
+              <p style={{ color: '#475569' }}>
+                התרופה טרם סומנה כנלקחת להיום. התזכורת היומית מוגדרת לשעה {reminderTime}.
+              </p>
+            </div>
+          </div>
+        )
       )}
 
       {/* Refill Status for Parent */}
@@ -617,9 +647,27 @@ export default function App() {
   const [role, setRole] = useState('teen'); // 'teen' | 'parent'
   const [showSettings, setShowSettings] = useState(false);
   
-  // Medication details - prefilled for user convenience
+  // Onboarding Flow & User Details
+  const [isOnboarded, setIsOnboarded] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0); // 0: Startup Selection, 1: Username Input, 2: Setup Form, 3: Success Code Screen
+  
+  const [username, setUsername] = useState('');
+  const [age, setAge] = useState('');
+  const [parentName, setParentName] = useState('');
+  const [reminderTime, setReminderTime] = useState('08:00');
+  const [inviteCode, setInviteCode] = useState('');
   const [drugName, setDrugName] = useState('גלולות Care');
-  const [dosage, setDosage] = useState('כדור אחד בערב');
+  const [dosage, setDosage] = useState('כדור אחד ביום');
+
+  // Parent Connection
+  const [parentConnected, setParentConnected] = useState(false);
+  const [parentCodeInput, setParentCodeInput] = useState('');
+  const [parentCodeError, setParentCodeError] = useState('');
+
+  // Time Simulation
+  const [simulatedTime, setSimulatedTime] = useState('08:05');
+  const [isTimeOverridden, setIsTimeOverridden] = useState(false);
+  const [showTimeSim, setShowTimeSim] = useState(false);
 
   const today = new Date();
   const todayStr = getLocalDateString(today);
@@ -648,17 +696,17 @@ export default function App() {
 
   // Alerts dismissal states
   const [alertDismissed, setAlertDismissed] = useState(false);
-  const [parentAlertDismissed, setParentAlertDismissed] = useState(false);
+  const [teenAlertDismissed, setTeenAlertDismissed] = useState(false);
+  const [parentEscalationDismissed, setParentEscalationDismissed] = useState(false);
 
   // Undo Confirmation dialog state
   const [confirmUndo, setConfirmUndo] = useState(null);
 
-  // Reset parent notification when role toggles to parent, so it shows immediately again if unresolved
+  // Reset alert dismissals when simulated time changes
   useEffect(() => {
-    if (role === 'parent') {
-      setParentAlertDismissed(false);
-    }
-  }, [role]);
+    setTeenAlertDismissed(false);
+    setParentEscalationDismissed(false);
+  }, [simulatedTime, isTimeOverridden]);
 
   // Derived state
   const cycleDay = cycleStartDate ? diffInDays(cycleStartDate, todayStr) : null;
@@ -670,21 +718,46 @@ export default function App() {
   const showRefillAlert = daysUntilRefill !== null && daysUntilRefill <= 7;
 
   // Automated Day 15 Alert logic
-  // Cycle starts at Day 1 (cycleDay = 0). Day 15 is cycleDay = 14.
   const isTargetAlertDay = cycleDay === 14;
-  const shouldShowAlertModal = isTargetAlertDay && role === 'teen' && !alertDismissed;
+  const shouldShowAlertModal = isTargetAlertDay && role === 'teen' && !alertDismissed && isOnboarded;
 
-  // Parental notifications trigger logic:
-  // Teen is in 10-day medication treatment window, but hasn't taken it today
-  const isTreatmentWindowActive = treatmentDay !== null && treatmentDay >= 0 && treatmentDay <= 9;
-  const hasMissedTodayPill = isTreatmentWindowActive && !markedTakenDays[todayStr];
-  const shouldShowParentNotification = role === 'parent' && hasMissedTodayPill && !parentAlertDismissed;
+  // Time Calculation helpers
+  const getCurrentTimeMinutes = () => {
+    if (isTimeOverridden) {
+      const [h, m] = simulatedTime.split(':').map(Number);
+      return h * 60 + m;
+    }
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  };
 
-  // Handlers with undo guards
+  const getCurrentTimeStr = () => {
+    if (isTimeOverridden) return simulatedTime;
+    const d = new Date();
+    const h = d.getHours().toString().padStart(2, '0');
+    const m = d.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
+  const currentMin = getCurrentTimeMinutes();
+  const [remH, remM] = reminderTime.split(':').map(Number);
+  const reminderMin = remH * 60 + remM;
+
+  const isPastReminderTime = currentMin >= reminderMin;
+  const isPastEscalationTime = currentMin >= reminderMin + 60;
+
+  // Notification Trigger conditions:
+  // For Days 2 to 10 of treatment (treatmentDay from index 1 to 9), if pill not taken yet
+  const isNotificationWindowActive = treatmentDay !== null && treatmentDay >= 1 && treatmentDay <= 9;
+  const isPillNotTakenToday = !markedTakenDays[todayStr];
+
+  const shouldShowTeenReminder = isNotificationWindowActive && isPillNotTakenToday && isPastReminderTime;
+  const shouldShowParentEscalation = isNotificationWindowActive && isPillNotTakenToday && isPastEscalationTime && parentConnected;
+
+  // Handlers
   const handleMarkCycleStart = (dateStr) => {
     const isCycleStart = cycleStartDate === dateStr;
     if (isCycleStart) {
-      // Prompt undo confirmation
       setConfirmUndo({
         message: 'האם את בטוחה שברצונך לבטל את סימון תחילת המחזור?',
         onConfirm: () => {
@@ -694,14 +767,13 @@ export default function App() {
       });
     } else {
       setCycleStartDate(dateStr);
-      setAlertDismissed(false); // Reset alert state if a new cycle is set
+      setAlertDismissed(false);
     }
   };
 
   const handleMarkTreatmentStart = (dateStr) => {
     const isTreatmentStart = treatmentStartDate === dateStr;
     if (isTreatmentStart) {
-      // Prompt undo confirmation
       setConfirmUndo({
         message: 'האם את בטוחה שברצונך לבטל את סימון תחילת הטיפול?',
         onConfirm: () => {
@@ -710,13 +782,17 @@ export default function App() {
       });
     } else {
       setTreatmentStartDate(dateStr);
+      // Day 1 Anchor: automatically mark today's medication as taken
+      setMarkedTakenDays(prev => ({
+        ...prev,
+        [dateStr]: true
+      }));
     }
   };
 
   const handleToggleTaken = (dateStr) => {
     const isTaken = markedTakenDays[dateStr] === true;
     if (isTaken) {
-      // Prompt undo confirmation
       setConfirmUndo({
         message: 'האם את בטוחה שברצונך לבטל את הפעולה?',
         onConfirm: () => {
@@ -727,19 +803,16 @@ export default function App() {
         }
       });
     } else {
-      // Mark as Taken
       setMarkedTakenDays(prev => ({
         ...prev,
         [dateStr]: true
       }));
 
-      // Trigger 360 spin animation feedback
       setJustMarkedDate(dateStr);
       setTimeout(() => {
         setJustMarkedDate(null);
       }, 700);
 
-      // CONFETTI explosion milestone for Day 10 (treatmentDay index 9)
       const tDay = treatmentStartDate ? diffInDays(treatmentStartDate, dateStr) : null;
       if (tDay === 9) {
         confetti({
@@ -765,6 +838,60 @@ export default function App() {
     }
   };
 
+  const handleOnboardingSubmit = () => {
+    if (!username.trim()) {
+      alert('אנא הזיני שם משתמש');
+      return;
+    }
+    if (!age.trim() || !drugName.trim() || !parentName.trim() || !reminderTime) {
+      alert('אנא מלאי את כל השדות בטופס');
+      return;
+    }
+    // Generate Invite Code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setInviteCode(code);
+    setIsOnboarded(true);
+    setOnboardingStep(3); // Success Screen
+  };
+
+  const handleParentLoginSubmit = () => {
+    const code = parentCodeInput.trim();
+    if (code === inviteCode || code === '123456') {
+      if (code === '123456' && !isOnboarded) {
+        // Logged in via fallback test code: prefill a simulated teen
+        setUsername('אופיר');
+        setAge('16');
+        setDrugName('יסמין');
+        setParentName('מיכל');
+        setReminderTime('08:00');
+        setInviteCode('123456');
+        setIsOnboarded(true);
+        // Place treatmentStartDate to yesterday so today is Day 2 of treatment for test!
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        setTreatmentStartDate(getLocalDateString(yesterday));
+      }
+      setParentConnected(true);
+      setRole('parent');
+      setParentCodeError('');
+    } else {
+      setParentCodeError('קוד לא תקין. הזיני את הקוד שיוצר באפליקציית הנערה (או 123456 לבדיקה).');
+    }
+  };
+
+  const handleInputFocus = (e) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
+
+  // Helper: determine if onboarding forms should display
+  const showStartupSelector = !isOnboarded && role === 'teen' && onboardingStep === 0;
+  const showUsernameStep = !isOnboarded && role === 'teen' && onboardingStep === 1;
+  const showFormStep = !isOnboarded && role === 'teen' && onboardingStep === 2;
+  const showSuccessStep = !isOnboarded && role === 'teen' && onboardingStep === 3;
+  const showParentLogin = role === 'parent' && !parentConnected;
+
   return (
     <div className="app-container" dir="rtl">
       
@@ -775,17 +902,31 @@ export default function App() {
         onStartTreatment={() => {
           setTreatmentStartDate(todayStr);
           setAlertDismissed(true);
+          // Automatically mark taken on Day 1
+          setMarkedTakenDays(prev => ({
+            ...prev,
+            [todayStr]: true
+          }));
         }}
       />
 
-      {/* 2. Parent Real-time Missed Medication Push Notification */}
-      <ParentAlertNotification 
-        show={shouldShowParentNotification}
-        onClose={() => setParentAlertDismissed(true)}
-        treatmentDay={treatmentDay}
+      {/* 2. Teen Real-time Medication Push Notification */}
+      <NotificationToast 
+        show={role === 'teen' && shouldShowTeenReminder && !teenAlertDismissed}
+        onClose={() => setTeenAlertDismissed(true)}
+        title="תזכורת נטילה יומי"
+        desc="היי מתוקה - לא לשכוח לקחת היום את הטיפול!"
       />
 
-      {/* 3. Undo Action Confirmation Dialog Modal */}
+      {/* 3. Parent Missed Medication Push Notification (60-minute escalation) */}
+      <NotificationToast 
+        show={role === 'parent' && shouldShowParentEscalation && !parentEscalationDismissed}
+        onClose={() => setParentEscalationDismissed(true)}
+        title="התראת אי-דיווח תרופה (הסלמה)"
+        desc={`היי, עברה שעה מזמן התזכורת של ${username} והיא טרם דיווחה על נטילת התרופה (${drugName}).`}
+      />
+
+      {/* 4. Undo Action Confirmation Dialog Modal */}
       <ConfirmUndoModal 
         show={confirmUndo !== null}
         onClose={() => setConfirmUndo(null)}
@@ -801,7 +942,38 @@ export default function App() {
         </div>
         
         <div className="header-controls">
-          {role === 'teen' && (
+          {/* Time Simulator widget inside header */}
+          {isOnboarded && (
+            <div className="time-simulator-widget">
+              <button onClick={() => setShowTimeSim(!showTimeSim)} className="sim-toggle-btn">
+                <span>⏰</span>
+                <span>{getCurrentTimeStr()}</span>
+              </button>
+              {showTimeSim && (
+                <div className="sim-dropdown glass-card">
+                  <h4>סימולציית זמן</h4>
+                  <label className="sim-label">
+                    <input 
+                      type="checkbox" 
+                      checked={isTimeOverridden} 
+                      onChange={(e) => setIsTimeOverridden(e.target.checked)} 
+                    />
+                    הפעל סימולציה
+                  </label>
+                  {isTimeOverridden && (
+                    <input 
+                      type="time" 
+                      value={simulatedTime} 
+                      onChange={(e) => setSimulatedTime(e.target.value)} 
+                      className="sim-time-input"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {role === 'teen' && isOnboarded && (
             <button 
               onClick={() => setShowSettings(true)}
               className="icon-btn"
@@ -810,19 +982,177 @@ export default function App() {
               <Settings size={20} />
             </button>
           )}
-          <button 
-            onClick={() => setRole(role === 'teen' ? 'parent' : 'teen')}
-            className={`role-badge ${role === 'teen' ? 'is-teen' : 'is-parent'}`}
-          >
-            <User size={16} />
-            <span>{role === 'teen' ? 'נערה' : 'הורה'}</span>
-          </button>
+
+          {isOnboarded && (
+            <button 
+              onClick={() => setRole(role === 'teen' ? 'parent' : 'teen')}
+              className={`role-badge ${role === 'teen' ? 'is-teen' : 'is-parent'}`}
+            >
+              <User size={16} />
+              <span>{role === 'teen' ? 'נערה' : 'הורה'}</span>
+            </button>
+          )}
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="app-main">
-        {role === 'teen' ? (
+        {showStartupSelector ? (
+          <div className="startup-container">
+            <div className="startup-title-wrapper">
+              <div className="startup-logo">
+                <HeartPulse size={48} />
+              </div>
+              <h2 className="startup-title">Care Cycle</h2>
+              <p className="startup-subtitle">המלווה האישי שלך למעקב בריאותי ונטילת תרופות</p>
+            </div>
+            
+            <div className="startup-options">
+              <div className="startup-option-card" onClick={() => setOnboardingStep(1)}>
+                <div className="option-icon-wrapper">
+                  <User size={24} />
+                </div>
+                <div className="option-content">
+                  <h3>כניסה כנערה</h3>
+                  <p>התחילי מעקב אישי, הגדירי תזכורות וצפי בלוח השנה שלך</p>
+                </div>
+              </div>
+
+              <div className="startup-option-card" onClick={() => setRole('parent')}>
+                <div className="option-icon-wrapper">
+                  <ShieldCheck size={24} />
+                </div>
+                <div className="option-content">
+                  <h3>כניסה כהורה</h3>
+                  <p>התחברי למעקב הנטילה של בתך באמצעות קוד הזמנה</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : showUsernameStep ? (
+          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto' }}>
+            <h2 className="status-title" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>איך נקרא לך?</h2>
+            <div className="form-fields">
+              <div>
+                <label className="input-label">שם משתמש</label>
+                <input 
+                  type="text" 
+                  placeholder="הקלידי את שמך..."
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onFocus={handleInputFocus}
+                  className="form-input"
+                />
+              </div>
+              <button onClick={() => setOnboardingStep(2)} className="submit-btn">
+                המשך
+              </button>
+            </div>
+          </div>
+        ) : showFormStep ? (
+          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto' }}>
+            <h2 className="status-title" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>פרטי הטיפול והתזכורת</h2>
+            <div className="form-fields">
+              <div>
+                <label className="input-label">גיל</label>
+                <input 
+                  type="number" 
+                  placeholder="לדוגמה: 16"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  onFocus={handleInputFocus}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="input-label">שם התרופה</label>
+                <input 
+                  type="text" 
+                  placeholder="לדוגמה: יסמין"
+                  value={drugName}
+                  onChange={(e) => setDrugName(e.target.value)}
+                  onFocus={handleInputFocus}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="input-label">שם ההורה המפקח</label>
+                <input 
+                  type="text" 
+                  placeholder="לדוגמה: מיכל"
+                  value={parentName}
+                  onChange={(e) => setParentName(e.target.value)}
+                  onFocus={handleInputFocus}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="input-label">שעת תזכורת יומית</label>
+                <input 
+                  type="time" 
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <button onClick={handleOnboardingSubmit} className="submit-btn">
+                סיימי הגדרה וצרי קוד
+              </button>
+            </div>
+          </div>
+        ) : showSuccessStep ? (
+          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto', textAlign: 'center' }}>
+            <div className="status-icon-wrapper medication" style={{ margin: '0 auto 1.5rem auto' }}>
+              <ShieldCheck size={32} />
+            </div>
+            <h2 className="status-title">הגדרה הושלמה בהצלחה!</h2>
+            <p className="status-subtitle" style={{ marginTop: '0.5rem' }}>היי {username}, קוד ההזמנה שלך מוכן:</p>
+            
+            <div className="invite-code-container">
+              <div className="invite-code-display">{inviteCode}</div>
+              <p className="status-helper-text" style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#6b21a8', maxW: '280px', margin: '1rem auto 0 auto' }}>
+                שתפי קוד זה עם {parentName} כדי שתוכל להתחבר ולקבל עדכונים.
+              </p>
+            </div>
+
+            <button onClick={() => setOnboardingStep(4)} className="submit-btn" style={{ marginTop: '1rem' }}>
+              היכנסי לאפליקציה
+            </button>
+          </div>
+        ) : showParentLogin ? (
+          <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto' }}>
+            <h2 className="status-title" style={{ textAlign: 'center', marginBottom: '0.5rem' }}>חיבור הורים</h2>
+            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#6b21a8', marginBottom: '1.5rem' }}>
+              הזיני את קוד ההזמנה בן 6 הספרות שקיבלת מהנערה כדי להתחבר למעקב.
+            </p>
+            
+            <div className="form-fields">
+              <div>
+                <label className="input-label">קוד הזמנה (6 ספרות)</label>
+                <input 
+                  type="text" 
+                  placeholder="הזיני קוד (לדוגמה: 123456)..."
+                  value={parentCodeInput}
+                  onChange={(e) => setParentCodeInput(e.target.value)}
+                  onFocus={handleInputFocus}
+                  className="form-input"
+                  style={{ textAlign: 'center', letterSpacing: '0.1em' }}
+                />
+                {parentCodeError && <p className="parent-code-error">{parentCodeError}</p>}
+              </div>
+              
+              <button onClick={handleParentLoginSubmit} className="submit-btn">
+                התחברי למעקב
+              </button>
+
+              <div style={{ textAlign: 'center' }}>
+                <button onClick={() => { setRole('teen'); setOnboardingStep(0); }} className="back-to-start-btn">
+                  חזרה למסך הראשי
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : role === 'teen' ? (
           <TeenView 
             cycleStartDate={cycleStartDate}
             treatmentStartDate={treatmentStartDate}
@@ -850,11 +1180,15 @@ export default function App() {
             drugName={drugName}
             daysUntilRefill={daysUntilRefill}
             showRefillAlert={showRefillAlert}
+            username={username}
+            reminderTime={reminderTime}
+            isPastEscalationTime={isPastEscalationTime}
+            isPastReminderTime={isPastReminderTime}
           />
         )}
       </main>
       
-      {/* 4. Settings Modal (Prefilled setup) */}
+      {/* Settings Modal (Prefilled setup) */}
       <SettingsModal 
         show={showSettings}
         onClose={() => setShowSettings(false)}
@@ -864,7 +1198,7 @@ export default function App() {
         setDosage={setDosage}
       />
 
-      {/* 5. Action-Based Calendar Day Click Options Modal */}
+      {/* Action-Based Calendar Day Click Options Modal */}
       <DayActionModal 
         show={selectedDateForAction !== null}
         onClose={() => setSelectedDateForAction(null)}
