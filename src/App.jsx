@@ -70,7 +70,7 @@ function NotificationToast({ show, onClose, title, desc }) {
   );
 }
 
-function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage, purchaseDate, setPurchaseDate, todayStr }) {
+function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage, purchaseDate, setPurchaseDate, todayStr, inviteCode }) {
   if (!show) return null;
 
   const handleInputFocus = (e) => {
@@ -123,6 +123,14 @@ function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage
               className="form-input"
             />
           </div>
+          
+          {inviteCode && (
+            <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(124, 58, 237, 0.08)', borderRadius: '12px', border: '1px dashed rgba(124, 58, 237, 0.25)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: '#6d28d9', fontWeight: '700' }}>קוד החיבור שלך להורה: </span>
+              <span style={{ fontSize: '1rem', color: '#4c1d95', fontWeight: '900', letterSpacing: '0.05em' }}>{inviteCode}</span>
+            </div>
+          )}
+
           <button onClick={onClose} className="submit-btn">
             שמירת שינויים
           </button>
@@ -729,11 +737,17 @@ export default function App() {
   // Undo Confirmation dialog state
   const [confirmUndo, setConfirmUndo] = useState(null);
 
+  // Day 10 Completion alerts
+  const [day10TeenAlert, setDay10TeenAlert] = useState(false);
+  const [day10ParentAlert, setDay10ParentAlert] = useState(false);
+
   // Reset alert dismissals when simulated time changes
   useEffect(() => {
     setTeenAlertDismissed(false);
     setParentEscalationDismissed(false);
     setRefillAlertDismissed(false);
+    setDay10TeenAlert(false);
+    setDay10ParentAlert(false);
   }, [simulatedTime, isTimeOverridden]);
 
   // Derived state
@@ -856,6 +870,8 @@ export default function App() {
           spread: 80,
           origin: { y: 0.6 }
         });
+        setDay10TeenAlert(true);
+        setDay10ParentAlert(true);
       }
     }
   };
@@ -889,8 +905,17 @@ export default function App() {
     // Generate Invite Code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setInviteCode(code);
+    
+    // Suppress Day 15 modal by setting cycleStartDate to null (it will only show if marked)
+    setCycleStartDate(null);
+
+    // Set onboarded and route directly to Main Calendar Screen
     setIsOnboarded(true);
-    setOnboardingStep(3); // Success Screen
+    setOnboardingStep(4);
+
+    // Trigger WhatsApp deep link with the updated message format
+    const messageText = `היי! בבקשה תוריד/י את האפליקציה מהקישור הבא: https://carecycle.co ותזין/י את הקוד שלי: ${code}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
   const handleParentLoginSubmit = () => {
@@ -992,7 +1017,23 @@ export default function App() {
         desc={`שימי לב! המרשם לתרופה ${drugName} עומד להסתיים בעוד שבוע. זה הזמן לדאוג לחידוש המרשם מול הרופא.`}
       />
 
-      {/* 5. Undo Action Confirmation Dialog Modal */}
+      {/* 5. Teen Day 10 Completion Push Notification */}
+      <NotificationToast 
+        show={role === 'teen' && day10TeenAlert}
+        onClose={() => setDay10TeenAlert(false)}
+        title="סיום סבב הטיפול! 🌸"
+        desc="כל הכבוד סיימת 10 ימי טיפול! ברגע התחלת המחזור עליך לסמן בלוח שנה תחילת המחזור."
+      />
+
+      {/* 6. Parent Day 10 Completion Push Notification */}
+      <NotificationToast 
+        show={role === 'parent' && parentConnected && day10ParentAlert}
+        onClose={() => setDay10ParentAlert(false)}
+        title="דיווח משמח מהטיפול! 🎉"
+        desc={`עדכון משמח: ${username || 'הנערה'} סיימה בהצלחה את סבב הטיפול של 10 ימים!`}
+      />
+
+      {/* 7. Undo Action Confirmation Dialog Modal */}
       <ConfirmUndoModal 
         show={confirmUndo !== null}
         onClose={() => setConfirmUndo(null)}
@@ -1055,7 +1096,7 @@ export default function App() {
               className={`role-badge ${role === 'teen' ? 'is-teen' : 'is-parent'}`}
             >
               <User size={16} />
-              <span>{role === 'teen' ? 'נערה' : 'הורה'}</span>
+              <span>{role === 'teen' ? (username || 'נערה') : 'הורה'}</span>
             </button>
           )}
         </div>
@@ -1283,6 +1324,7 @@ export default function App() {
         purchaseDate={purchaseDate}
         setPurchaseDate={setPurchaseDate}
         todayStr={todayStr}
+        inviteCode={inviteCode}
       />
 
       {/* Action-Based Calendar Day Click Options Modal */}
