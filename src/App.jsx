@@ -17,9 +17,10 @@ import {
   Bell,
   Edit3
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import './App.css';
 
-// Utility functions for date manipulation
+// --- Utility Functions ---
 const getLocalDateString = (date) => {
   const d = new Date(date);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -35,130 +36,42 @@ const diffInDays = (startStr, endStr) => {
   return Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
 };
 
-export default function App() {
-  // Application State
-  const [role, setRole] = useState('teen'); // 'teen' | 'parent'
-  const [showSettings, setShowSettings] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
-  
-  // Starting with empty medication details so the teen must enter them
-  const [drugName, setDrugName] = useState('');
-  const [dosage, setDosage] = useState('');
+// --- Standalone React Components (Defined outside App scope to fix input focus bugs) ---
 
-  // Initialize dates for demo purposes
-  const today = new Date();
-  
-  // Set demo to EXACTLY day 14 to show the push notification right away
-  const demoPeriodStart = new Date();
-  demoPeriodStart.setDate(today.getDate() - 14); 
-  
-  const demoRefillStart = new Date();
-  demoRefillStart.setDate(today.getDate() - 115); // 5 days left until 120 days
-
-  const [periodStartDate, setPeriodStartDate] = useState(getLocalDateString(demoPeriodStart));
-  const [refillDate, setRefillDate] = useState(getLocalDateString(demoRefillStart));
-  const [medLogs, setMedLogs] = useState({});
-  
-  // Create demo period logs for the first 4 days to show the unique marking
-  const demoPeriodLogs = {};
-  for(let i=0; i<4; i++) {
-    const d = new Date(demoPeriodStart);
-    d.setDate(d.getDate() + i);
-    demoPeriodLogs[getLocalDateString(d)] = true;
-  }
-  const [periodLogs, setPeriodLogs] = useState(demoPeriodLogs);
-  
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  // Derived State
-  const todayStr = getLocalDateString(today);
-  const cycleDay = periodStartDate ? diffInDays(periodStartDate, todayStr) : null;
-  
-  // Cycle logic: Days 0-13 Waiting (14 days total), Days 14-23 Medication
-  const isWaitingPhase = cycleDay !== null && cycleDay >= 0 && cycleDay <= 13;
-  const isMedicationPhase = cycleDay !== null && cycleDay >= 14 && cycleDay <= 23;
-  const isMedicationTakenToday = medLogs[todayStr] === true;
-
-  // Refill logic: 120 days cycle
-  const daysSinceRefill = refillDate ? diffInDays(refillDate, todayStr) : null;
-  const daysUntilRefill = daysSinceRefill !== null ? Math.max(0, 120 - daysSinceRefill) : null;
-  const showRefillAlert = daysUntilRefill !== null && daysUntilRefill <= 7;
-
-  // Check for day 14 notification (Push Notification simulation)
-  useEffect(() => {
-    if (cycleDay === 14 && role === 'teen') {
-      setShowNotification(true);
-      
-      // Optional: Try native browser notification if permitted
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Care cycle - תזכורת טיפול", {
-          body: "עברו 14 ימים מתחילת המחזור. זה הזמן להתחיל את הטיפול התרופתי.",
-          icon: "/favicon.ico"
-        });
-      }
-    } else {
-      setShowNotification(false);
-    }
-  }, [cycleDay, role]);
-
-  // Request notification permission on first load
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  // Handlers
-  const handleLogPeriod = () => {
-    setPeriodStartDate(todayStr);
-    setMedLogs({}); // Reset logs for the new cycle
-    setPeriodLogs({ [todayStr]: true }); // Mark first day of bleeding
-  };
-  
-  const handleLogRefill = () => setRefillDate(todayStr);
-  
-  const handleDayClick = (dateStr) => {
-    if (role !== 'teen') return;
-    
-    const dayOfCycle = diffInDays(periodStartDate, dateStr);
-    
-    // Toggle medication log during med phase
-    if (dayOfCycle >= 14 && dayOfCycle <= 23 && dateStr <= todayStr) {
-      setMedLogs(prev => ({ ...prev, [dateStr]: !prev[dateStr] }));
-    }
-    // Toggle period bleeding log during waiting phase
-    else if (dayOfCycle >= 0 && dayOfCycle <= 13 && dateStr <= todayStr) {
-      setPeriodLogs(prev => ({ ...prev, [dateStr]: !prev[dateStr] }));
-    }
-  };
-
-  // Components
-  const NotificationToast = () => (
+function NotificationToast({ show, onClose, title, desc }) {
+  if (!show) return null;
+  return (
     <div className="notification-toast">
       <div className="toast-badge">
         <Bell size={24} className="animated-bell" />
       </div>
       <div className="toast-body">
-        <h3 className="toast-title">הגיע הזמן להתחיל!</h3>
-        <p className="toast-desc">
-          עברו 14 ימים מיום קבלת המחזור. על פי התוכנית, עליך להתחיל את הטיפול התרופתי היום.
-        </p>
+        <h3 className="toast-title">{title}</h3>
+        <p className="toast-desc">{desc}</p>
       </div>
-      <button 
-        onClick={() => setShowNotification(false)} 
-        className="toast-close"
-      >
+      <button onClick={onClose} className="toast-close">
         <X size={20} />
       </button>
     </div>
   );
+}
 
-  const SettingsModal = () => (
+function SettingsModal({ show, onClose, drugName, setDrugName, dosage, setDosage }) {
+  if (!show) return null;
+
+  const handleInputFocus = (e) => {
+    // Wait for the virtual keyboard to fully pop up and resize the viewport
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
+
+  return (
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
           <h2 className="modal-title">הגדרת תרופה ומינון</h2>
-          <button onClick={() => setShowSettings(false)} className="close-btn">
+          <button onClick={onClose} className="close-btn">
             <X size={24} />
           </button>
         </div>
@@ -170,6 +83,7 @@ export default function App() {
               placeholder="לדוגמה: גלולות למניעת הריון..."
               value={drugName} 
               onChange={(e) => setDrugName(e.target.value)}
+              onFocus={handleInputFocus}
               className="form-input"
             />
           </div>
@@ -180,154 +94,314 @@ export default function App() {
               placeholder="לדוגמה: כדור אחד ביום"
               value={dosage} 
               onChange={(e) => setDosage(e.target.value)}
+              onFocus={handleInputFocus}
               className="form-input"
             />
           </div>
-          <button 
-            onClick={() => setShowSettings(false)}
-            className="submit-btn"
-          >
+          <button onClick={onClose} className="submit-btn">
             שמירת שינויים
           </button>
         </div>
       </div>
     </div>
   );
+}
 
-  const Calendar = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
-    
-    const days = [];
-    for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
-    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
-
-    const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
-    const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
-
-    const monthNames = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
-
-    return (
-      <div className="glass-card calendar-card">
-        <div className="calendar-header">
-          <h2 className="calendar-title">
-            {monthNames[month]} {year}
-          </h2>
-          <div className="calendar-nav">
-            <button onClick={prevMonth} className="nav-btn">
-              <ChevronRight size={18}/>
-            </button>
-            <button onClick={nextMonth} className="nav-btn">
-              <ChevronLeft size={18}/>
-            </button>
-          </div>
+function DayActionModal({ show, onClose, dateStr, onMarkCycleStart, onMarkTreatmentStart, onToggleTaken, isCycleStart, isTreatmentStart, isTaken }) {
+  if (!show) return null;
+  
+  // Format Hebrew date display
+  const formattedDate = dateStr ? dateStr.split('-').reverse().join('/') : '';
+  
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2 className="modal-title">אפשרויות לתאריך {formattedDate}</h2>
+          <button onClick={onClose} className="close-btn">
+            <X size={24} />
+          </button>
         </div>
-
-        <div className="calendar-grid">
-          {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(day => (
-            <div key={day} className="weekday-header">{day}</div>
-          ))}
+        <div className="form-fields" style={{ gap: '0.85rem' }}>
+          <button 
+            onClick={() => { onMarkCycleStart(dateStr); onClose(); }} 
+            className="refill-btn standard"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.8rem', justifyContent: 'center' }}
+          >
+            <Droplet size={18} className="warn-icon" style={{ color: '#f43f5e', margin: 0 }} />
+            <span>{isCycleStart ? 'בטלי סימון תחילת מחזור (Bleeding)' : 'קבעי כתחילת המחזור (Bleeding)'}</span>
+          </button>
           
-          {days.map((date, i) => {
-            if (!date) return <div key={`empty-${i}`} />;
-            
-            const dateStr = getLocalDateString(date);
-            const isToday = dateStr === todayStr;
-            const cycleD = periodStartDate ? diffInDays(periodStartDate, dateStr) : null;
-            
-            const isWait = cycleD !== null && cycleD >= 0 && cycleD <= 13;
-            const isMed = cycleD !== null && cycleD >= 14 && cycleD <= 23;
-            const isTaken = medLogs[dateStr] === true;
-            const isPeriodDay = periodLogs[dateStr] === true;
-            
-            const isMedClickable = role === 'teen' && isMed && dateStr <= todayStr;
-            const isWaitClickable = role === 'teen' && isWait && dateStr <= todayStr;
-            const isClickable = isMedClickable || isWaitClickable;
+          <button 
+            onClick={() => { onMarkTreatmentStart(dateStr); onClose(); }} 
+            className="refill-btn standard"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.8rem', justifyContent: 'center' }}
+          >
+            <Pill size={18} style={{ color: '#7c3aed' }} />
+            <span>{isTreatmentStart ? 'בטלי סימון תחילת טיפול' : 'קבעי כתחילת הטיפול'}</span>
+          </button>
 
-            let extraClasses = "";
-            if (isWait) extraClasses += " is-waiting";
-            if (isMed) extraClasses += " is-medication";
-            if (isPeriodDay) extraClasses += " is-bleeding";
-            if (isTaken) extraClasses += " is-taken";
-            if (isToday) extraClasses += " is-today";
-            if (isClickable) extraClasses += " is-clickable";
+          <button 
+            onClick={() => { onToggleTaken(dateStr); onClose(); }} 
+            className="refill-btn standard"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.8rem', justifyContent: 'center' }}
+          >
+            <CheckCircle2 size={18} style={{ color: '#10b981' }} />
+            <span>{isTaken ? 'בטלי דיווח נטילת תרופה' : 'דווחי על נטילת תרופה'}</span>
+          </button>
 
-            return (
-              <div key={dateStr} className="date-btn-container">
-                <button
-                  disabled={!isClickable}
-                  onClick={() => handleDayClick(dateStr)}
-                  className={`date-btn${extraClasses}`}
-                >
-                  {date.getDate()}
-                </button>
-                {isMed && !isTaken && dateStr < todayStr && (
-                  <div className="missed-dot" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-        
-        <div className="calendar-legend">
-          <div className="legend-item">
-            <div className="legend-dot waiting"></div>
-            <span>המתנה (14 יום)</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot bleeding"></div>
-            <span>דימום</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot medication"></div>
-            <span>תרופה</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot taken"></div>
-            <span>נלקח</span>
-          </div>
+          <button 
+            onClick={onClose} 
+            className="submit-btn" 
+            style={{ background: '#64748b', marginTop: '0.75rem', padding: '0.75rem' }}
+          >
+            ביטול
+          </button>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+}
 
-  const TeenView = () => (
+function TreatmentAlertModal({ show, onClose, onStartTreatment }) {
+  if (!show) return null;
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ border: '2px solid #a78bfa', animation: 'zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+        <div className="modal-header">
+          <h2 className="modal-title" style={{ color: '#7c3aed', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Bell size={24} className="animated-bell" />
+            <span>תזכורת: זמן להתחיל טיפול!</span>
+          </h2>
+          <button onClick={onClose} className="close-btn">
+            <X size={24} />
+          </button>
+        </div>
+        <div style={{ padding: '0.25rem 0 1rem 0', textAlign: 'right' }}>
+          <p style={{ fontSize: '0.95rem', color: '#4c1d95', lineHeight: '1.5', fontWeight: '500' }}>
+            עברו 14 ימים מתחילת המחזור שסימנת. על פי התוכנית הטיפולית, היום (היום ה-15) עליך להתחיל את נטילת התרופות.
+          </p>
+        </div>
+        <div className="form-fields">
+          <button 
+            onClick={() => { onStartTreatment(); onClose(); }} 
+            className="submit-btn"
+            style={{ margin: 0 }}
+          >
+            התחלתי את הטיפול היום
+          </button>
+          <button 
+            onClick={onClose} 
+            className="refill-btn standard"
+            style={{ padding: '0.75rem', fontWeight: '700' }}
+          >
+            סגור תזכורת
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ParentAlertNotification({ show, onClose, treatmentDay }) {
+  if (!show) return null;
+  return (
+    <div className="notification-toast" style={{ border: '1px solid #fca5a5', background: 'rgba(254, 242, 242, 0.95)', boxShadow: '0 20px 40px rgba(239, 68, 68, 0.15)' }}>
+      <div className="toast-badge" style={{ background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)', boxShadow: '0 6px 12px rgba(239, 68, 68, 0.2)' }}>
+        <AlertCircle size={24} className="animated-bell" />
+      </div>
+      <div className="toast-body">
+        <h3 className="toast-title" style={{ color: '#991b1b' }}>התראת אי-דיווח תרופה</h3>
+        <p className="toast-desc" style={{ color: '#7f1d1d' }}>
+          הנערה נמצאת ביום ה-{treatmentDay + 1} של הטיפול התרופתי, אך טרם סימנה שנלקחה התרופה היומית להיום.
+        </p>
+      </div>
+      <button onClick={onClose} className="toast-close" style={{ color: '#f87171' }}>
+        <X size={20} />
+      </button>
+    </div>
+  );
+}
+
+function ConfirmUndoModal({ show, onClose, onConfirm, message }) {
+  if (!show) return null;
+  return (
+    <div className="modal-overlay" style={{ zIndex: 120 }}>
+      <div className="modal-content" style={{ maxWidth: '340px', border: '1px solid #fca5a5' }}>
+        <div style={{ padding: '0.5rem 0 1.25rem 0', textAlign: 'center' }}>
+          <p style={{ fontSize: '1rem', color: '#1e1b4b', fontWeight: '700', lineHeight: '1.5' }}>
+            {message}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button 
+            onClick={() => { onConfirm(); onClose(); }} 
+            className="submit-btn" 
+            style={{ margin: 0, flex: 1, background: '#ef4444' }}
+          >
+            אישור
+          </button>
+          <button 
+            onClick={onClose} 
+            className="refill-btn standard" 
+            style={{ margin: 0, flex: 1, padding: '0.75rem', fontWeight: '700' }}
+          >
+            ביטול
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Calendar({ currentMonth, setCurrentMonth, todayStr, cycleStartDate, treatmentStartDate, markedTakenDays, justMarkedDate, onDayClick, role }) {
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  
+  const days = [];
+  for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
+
+  const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
+
+  const monthNames = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+
+  return (
+    <div className="glass-card calendar-card">
+      <div className="calendar-header">
+        <h2 className="calendar-title">
+          {monthNames[month]} {year}
+        </h2>
+        <div className="calendar-nav">
+          <button onClick={prevMonth} className="nav-btn">
+            <ChevronRight size={18}/>
+          </button>
+          <button onClick={nextMonth} className="nav-btn">
+            <ChevronLeft size={18}/>
+          </button>
+        </div>
+      </div>
+
+      <div className="calendar-grid">
+        {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(day => (
+          <div key={day} className="weekday-header">{day}</div>
+        ))}
+        
+        {days.map((date, i) => {
+          if (!date) return <div key={`empty-${i}`} />;
+          
+          const dateStr = getLocalDateString(date);
+          const isToday = dateStr === todayStr;
+          
+          const isCycleStart = dateStr === cycleStartDate;
+          const isTreatmentStart = dateStr === treatmentStartDate;
+          const isTaken = markedTakenDays[dateStr] === true;
+          const isJustMarked = dateStr === justMarkedDate;
+          
+          const isClickable = role === 'teen';
+
+          let extraClasses = "";
+          if (isCycleStart) extraClasses += " is-cycle-start";
+          if (isTreatmentStart) extraClasses += " is-treatment-start";
+          
+          // Apply spin-morph animation class if just checked, else apply static taken class
+          if (isTaken) {
+            if (isJustMarked) {
+              extraClasses += " animate-spin-morph";
+            } else {
+              extraClasses += " is-taken-day";
+            }
+          }
+
+          if (isToday) extraClasses += " is-today";
+          if (isClickable) extraClasses += " is-clickable";
+
+          return (
+            <div key={dateStr} className="date-btn-container">
+              <button
+                disabled={!isClickable}
+                onClick={() => onDayClick(dateStr)}
+                className={`date-btn${extraClasses}`}
+              >
+                {date.getDate()}
+                
+                {/* Visual marker dots only for bleeding and treatment start */}
+                {!isTaken && isCycleStart && <span className="marker-dot cycle-start" />}
+                {!isTaken && isTreatmentStart && <span className="marker-dot treatment-start" />}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      
+      <div className="calendar-legend">
+        <div className="legend-item">
+          <div className="legend-dot cycle-start"></div>
+          <span>דימום (Start of Cycle)</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-dot treatment-start"></div>
+          <span>תחילת טיפול (Treatment Start)</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-dot taken"></div>
+          <span>תרופה נלקחה (Medication Taken)</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TeenView({ 
+  cycleStartDate, 
+  treatmentStartDate, 
+  markedTakenDays, 
+  justMarkedDate,
+  todayStr, 
+  drugName, 
+  dosage, 
+  showRefillAlert, 
+  daysUntilRefill, 
+  handleLogRefill, 
+  onDayClick, 
+  currentMonth, 
+  setCurrentMonth, 
+  role, 
+  setShowSettings,
+  onToggleTaken
+}) {
+  const cycleDay = cycleStartDate ? diffInDays(cycleStartDate, todayStr) : null;
+  const treatmentDay = treatmentStartDate ? diffInDays(treatmentStartDate, todayStr) : null;
+  
+  const isMedicationTakenToday = markedTakenDays[todayStr] === true;
+
+  const isInTreatmentWindow = treatmentDay !== null && treatmentDay >= 0 && treatmentDay <= 9;
+  const isInWaitingWindow = !isInTreatmentWindow && cycleDay !== null && cycleDay >= 0 && cycleDay <= 13;
+
+  return (
     <div className="view-container">
 
       {/* Main Status Card */}
       <div className="glass-card status-card">
-        {isWaitingPhase ? (
-          <>
-            <div className="status-icon-wrapper waiting">
-              <CalendarIcon size={32} strokeWidth={1.5} />
-            </div>
-            <h2 className="status-title">שלב ההמתנה</h2>
-            <p className="status-subtitle">
-              יום {cycleDay + 1} מתוך 14
-            </p>
-            <div className="progress-bar-container">
-              <div className="progress-bar" style={{ width: `${((cycleDay + 1) / 14) * 100}%` }}></div>
-            </div>
-            <p className="status-helper-text">הטיפול התרופתי יתחיל ביום ה-15</p>
-          </>
-        ) : isMedicationPhase ? (
+        {isInTreatmentWindow ? (
           <>
             <div className="status-icon-wrapper medication">
               <Pill size={32} strokeWidth={1.5} />
             </div>
             <h2 className="status-title">שלב התרופה</h2>
             <p className="status-subtitle">
-              יום {cycleDay - 13} מתוך 10
+              יום {treatmentDay + 1} מתוך 10 לטיפול
             </p>
+            <div className="progress-bar-container">
+              <div className="progress-bar" style={{ width: `${((treatmentDay + 1) / 10) * 100}%` }}></div>
+            </div>
             
             <div className="inline-med-control">
                {(!drugName || !dosage) ? (
-                 <button 
-                   onClick={() => setShowSettings(true)}
-                   className="setup-prompt-btn"
-                 >
+                 <button onClick={() => setShowSettings(true)} className="setup-prompt-btn">
                    <Edit3 size={24} />
                    <span>הקלידי את פרטי התרופה כאן</span>
                  </button>
@@ -341,15 +415,12 @@ export default function App() {
                       <p className="med-dosage">{dosage}</p>
                    </div>
                    {isMedicationTakenToday ? (
-                     <div className="med-status-tag">
+                     <button onClick={() => onToggleTaken(todayStr)} className="med-status-tag">
                        <CheckCircle2 size={16} /> 
                        <span>נלקח היום</span>
-                     </div>
+                     </button>
                    ) : (
-                     <button 
-                       onClick={() => handleDayClick(todayStr)}
-                       className="mark-taken-btn"
-                     >
+                     <button onClick={() => onToggleTaken(todayStr)} className="mark-taken-btn">
                        סמני כנלקח
                      </button>
                    )}
@@ -357,41 +428,59 @@ export default function App() {
                )}
             </div>
           </>
+        ) : isInWaitingWindow ? (
+          <>
+            <div className="status-icon-wrapper waiting">
+              <CalendarIcon size={32} strokeWidth={1.5} />
+            </div>
+            <h2 className="status-title">שלב ההמתנה</h2>
+            <p className="status-subtitle">
+              יום {cycleDay + 1} מתוך 14 למחזור
+            </p>
+            <div className="progress-bar-container" style={{ background: 'rgba(219, 39, 119, 0.1)' }}>
+              <div className="progress-bar" style={{ width: `${((cycleDay + 1) / 14) * 100}%`, background: 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' }}></div>
+            </div>
+            <p className="status-helper-text">הטיפול התרופתי יתחיל ביום ה-15</p>
+          </>
         ) : (
           <>
             <div className="status-icon-wrapper inactive">
               <HeartPulse size={32} />
             </div>
-            <h2 className="status-title">אין מחזור פעיל</h2>
+            <h2 className="status-title">אין טיפול/מחזור פעיל</h2>
             <p className="status-helper-text inactive">
-              יש לדווח על היום הראשון של המחזור כדי להתחיל ספירה של 14 ימי המתנה.
+              לחצי על יום בלוח השנה וסמני את תאריך תחילת המחזור או תחילת הטיפול כדי להתחיל מעקב.
             </p>
           </>
         )}
       </div>
 
-      <Calendar />
+      <Calendar 
+        currentMonth={currentMonth}
+        setCurrentMonth={setCurrentMonth}
+        todayStr={todayStr}
+        cycleStartDate={cycleStartDate}
+        treatmentStartDate={treatmentStartDate}
+        markedTakenDays={markedTakenDays}
+        justMarkedDate={justMarkedDate}
+        onDayClick={onDayClick}
+        role={role}
+      />
 
       {/* Action Buttons & Refill Alert */}
       <div className="actions-grid">
-        {/* Only show this button if not in a cycle or cycle is completely done */}
-        {(!periodStartDate || cycleDay > 23) && (
-          <button 
-            onClick={handleLogPeriod}
-            className="action-card"
-          >
-            <div className="action-info">
-              <div className="action-icon">
-                <Droplet size={24} />
-              </div>
-              <div className="action-text">
-                <h3>קיבלתי מחזור</h3>
-                <p>התחילי ספירת 14 ימים</p>
-              </div>
+        <button onClick={() => onDayClick(todayStr)} className="action-card">
+          <div className="action-info">
+            <div className="action-icon">
+              <Droplet size={24} />
             </div>
-            <ChevronLeft className="chevron-icon" />
-          </button>
-        )}
+            <div className="action-text">
+              <h3>דיווח תאריכים יומי</h3>
+              <p>לחצי כאן לעדכון יום נוכחי</p>
+            </div>
+          </div>
+          <ChevronLeft className="chevron-icon" />
+        </button>
 
         <div className={`refill-card${showRefillAlert ? ' has-alert' : ''}`}>
           <div className="refill-header">
@@ -418,8 +507,26 @@ export default function App() {
       </div>
     </div>
   );
+}
 
-  const ParentView = () => (
+function ParentView({ 
+  cycleStartDate, 
+  treatmentStartDate, 
+  markedTakenDays, 
+  todayStr, 
+  drugName, 
+  daysUntilRefill, 
+  showRefillAlert 
+}) {
+  const cycleDay = cycleStartDate ? diffInDays(cycleStartDate, todayStr) : null;
+  const treatmentDay = treatmentStartDate ? diffInDays(treatmentStartDate, todayStr) : null;
+  
+  const isMedicationTakenToday = markedTakenDays[todayStr] === true;
+  
+  const isInTreatmentWindow = treatmentDay !== null && treatmentDay >= 0 && treatmentDay <= 9;
+  const isInWaitingWindow = !isInTreatmentWindow && cycleDay !== null && cycleDay >= 0 && cycleDay <= 13;
+
+  return (
     <div className="view-container">
       <div className="glass-card parent-header-card">
         <div className="parent-avatar-badge">
@@ -440,40 +547,44 @@ export default function App() {
         <div className="info-rows">
           <div className="info-row">
             <span className="label">שלב במחזור:</span>
-            <span className="value">
-              {isWaitingPhase ? 'המתנה (14 ימים)' : isMedicationPhase ? 'נטילת תרופה' : 'לא פעיל'}
+            <span className="value" style={{ color: isInTreatmentWindow ? '#7c3aed' : isInWaitingWindow ? '#db2777' : '#64748b' }}>
+              {isInTreatmentWindow ? 'נטילת תרופה' : isInWaitingWindow ? 'המתנה (14 ימים)' : 'לא פעיל'}
             </span>
           </div>
           {cycleDay !== null && cycleDay <= 23 && (
             <div className="info-row">
-              <span className="label">יום נוכחי:</span>
+              <span className="label">יום נוכחי למחזור:</span>
               <span className="value">יום {cycleDay + 1} מתוך 24</span>
             </div>
           )}
-          {isMedicationPhase && (
-            <div className="info-row">
-              <span className="label">שם התרופה:</span>
-              <span className="value">{drugName || 'טרם הוזן'}</span>
-            </div>
-          )}
-          {isMedicationPhase && (
-            <div className="info-row">
-              <span className="label">סטטוס תרופה היום:</span>
-              <span className="value">
-                {isMedicationTakenToday ? 'נלקח בהצלחה' : 'טרם נלקח'}
-              </span>
-            </div>
+          {isInTreatmentWindow && (
+            <>
+              <div className="info-row">
+                <span className="label">יום טיפול תרופתי:</span>
+                <span className="value">יום {treatmentDay + 1} מתוך 10</span>
+              </div>
+              <div className="info-row">
+                <span className="label">שם התרופה:</span>
+                <span className="value">{drugName || 'טרם הוזן'}</span>
+              </div>
+              <div className="info-row">
+                <span className="label">סטטוס תרופה היום:</span>
+                <span className="value" style={{ color: isMedicationTakenToday ? '#10b981' : '#ef4444' }}>
+                  {isMedicationTakenToday ? 'נלקח בהצלחה' : 'טרם נלקח'}
+                </span>
+              </div>
+            </>
           )}
         </div>
       </div>
 
       {/* Missing Logs Warning for Parent */}
-      {isMedicationPhase && !isMedicationTakenToday && (
-        <div className="parent-warn-banner">
-          <AlertCircle className="warn-icon" size={20} />
+      {isInTreatmentWindow && !isMedicationTakenToday && (
+        <div className="parent-warn-banner" style={{ border: '1px solid #fca5a5', background: '#fef2f2' }}>
+          <AlertCircle className="warn-icon" size={20} style={{ color: '#ef4444' }} />
           <div className="warn-content">
-            <h4>תזכורת תרופה</h4>
-            <p>
+            <h4 style={{ color: '#991b1b' }}>תזכורת תרופה להורה</h4>
+            <p style={{ color: '#7f1d1d' }}>
               הנערה נמצאת בשלב נטילת התרופה אך טרם סימנה שנלקחה היום. כדאי לבדוק או להזכיר בעדינות.
             </p>
           </div>
@@ -490,18 +601,197 @@ export default function App() {
         <div className="info-rows">
           <div className="info-row">
             <span className="label">ימים שנותרו לחידוש:</span>
-            <span className="value">{daysUntilRefill !== null ? daysUntilRefill : 'לא ידוע'}</span>
+            <span className="value" style={{ color: showRefillAlert ? '#ef4444' : '#1e1b4b' }}>
+              {daysUntilRefill !== null ? `${daysUntilRefill} ימים` : 'לא ידוע'}
+            </span>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// --- Main App Component ---
+
+export default function App() {
+  const [role, setRole] = useState('teen'); // 'teen' | 'parent'
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Medication details - prefilled for user convenience
+  const [drugName, setDrugName] = useState('גלולות Care');
+  const [dosage, setDosage] = useState('כדור אחד בערב');
+
+  const today = new Date();
+  const todayStr = getLocalDateString(today);
+
+  // Initialize demo: Cycle start 14 days ago (makes today the target Day 15 Alert!)
+  const demoCycleStart = new Date();
+  demoCycleStart.setDate(today.getDate() - 14);
+  const [cycleStartDate, setCycleStartDate] = useState(getLocalDateString(demoCycleStart));
+
+  // Manually configured Treatment Start Date (set to null initially for demo/manual choice)
+  const [treatmentStartDate, setTreatmentStartDate] = useState(null);
+
+  // Medication logs: key is dateStr, value is boolean
+  const [markedTakenDays, setMarkedTakenDays] = useState({});
+  
+  // Date which was just marked as taken, triggers local spin animation
+  const [justMarkedDate, setJustMarkedDate] = useState(null);
+
+  // Refill details
+  const demoRefillStart = new Date();
+  demoRefillStart.setDate(today.getDate() - 115); // 5 days left until 120 days
+  const [refillDate, setRefillDate] = useState(getLocalDateString(demoRefillStart));
+
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDateForAction, setSelectedDateForAction] = useState(null);
+
+  // Alerts dismissal states
+  const [alertDismissed, setAlertDismissed] = useState(false);
+  const [parentAlertDismissed, setParentAlertDismissed] = useState(false);
+
+  // Undo Confirmation dialog state
+  const [confirmUndo, setConfirmUndo] = useState(null);
+
+  // Reset parent notification when role toggles to parent, so it shows immediately again if unresolved
+  useEffect(() => {
+    if (role === 'parent') {
+      setParentAlertDismissed(false);
+    }
+  }, [role]);
+
+  // Derived state
+  const cycleDay = cycleStartDate ? diffInDays(cycleStartDate, todayStr) : null;
+  const treatmentDay = treatmentStartDate ? diffInDays(treatmentStartDate, todayStr) : null;
+
+  // Refill math
+  const daysSinceRefill = refillDate ? diffInDays(refillDate, todayStr) : null;
+  const daysUntilRefill = daysSinceRefill !== null ? Math.max(0, 120 - daysSinceRefill) : null;
+  const showRefillAlert = daysUntilRefill !== null && daysUntilRefill <= 7;
+
+  // Automated Day 15 Alert logic
+  // Cycle starts at Day 1 (cycleDay = 0). Day 15 is cycleDay = 14.
+  const isTargetAlertDay = cycleDay === 14;
+  const shouldShowAlertModal = isTargetAlertDay && role === 'teen' && !alertDismissed;
+
+  // Parental notifications trigger logic:
+  // Teen is in 10-day medication treatment window, but hasn't taken it today
+  const isTreatmentWindowActive = treatmentDay !== null && treatmentDay >= 0 && treatmentDay <= 9;
+  const hasMissedTodayPill = isTreatmentWindowActive && !markedTakenDays[todayStr];
+  const shouldShowParentNotification = role === 'parent' && hasMissedTodayPill && !parentAlertDismissed;
+
+  // Handlers with undo guards
+  const handleMarkCycleStart = (dateStr) => {
+    const isCycleStart = cycleStartDate === dateStr;
+    if (isCycleStart) {
+      // Prompt undo confirmation
+      setConfirmUndo({
+        message: 'האם את בטוחה שברצונך לבטל את סימון תחילת המחזור?',
+        onConfirm: () => {
+          setCycleStartDate(null);
+          setAlertDismissed(false);
+        }
+      });
+    } else {
+      setCycleStartDate(dateStr);
+      setAlertDismissed(false); // Reset alert state if a new cycle is set
+    }
+  };
+
+  const handleMarkTreatmentStart = (dateStr) => {
+    const isTreatmentStart = treatmentStartDate === dateStr;
+    if (isTreatmentStart) {
+      // Prompt undo confirmation
+      setConfirmUndo({
+        message: 'האם את בטוחה שברצונך לבטל את סימון תחילת הטיפול?',
+        onConfirm: () => {
+          setTreatmentStartDate(null);
+        }
+      });
+    } else {
+      setTreatmentStartDate(dateStr);
+    }
+  };
+
+  const handleToggleTaken = (dateStr) => {
+    const isTaken = markedTakenDays[dateStr] === true;
+    if (isTaken) {
+      // Prompt undo confirmation
+      setConfirmUndo({
+        message: 'האם את בטוחה שברצונך לבטל את הפעולה?',
+        onConfirm: () => {
+          setMarkedTakenDays(prev => ({
+            ...prev,
+            [dateStr]: false
+          }));
+        }
+      });
+    } else {
+      // Mark as Taken
+      setMarkedTakenDays(prev => ({
+        ...prev,
+        [dateStr]: true
+      }));
+
+      // Trigger 360 spin animation feedback
+      setJustMarkedDate(dateStr);
+      setTimeout(() => {
+        setJustMarkedDate(null);
+      }, 700);
+
+      // CONFETTI explosion milestone for Day 10 (treatmentDay index 9)
+      const tDay = treatmentStartDate ? diffInDays(treatmentStartDate, dateStr) : null;
+      if (tDay === 9) {
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+  };
+
+  const handleLogRefill = () => {
+    const isRefillToday = refillDate === todayStr;
+    if (isRefillToday) {
+      setConfirmUndo({
+        message: 'האם את בטוחה שברצונך לבטל את סימון חידוש המרשם?',
+        onConfirm: () => {
+          setRefillDate(null);
+        }
+      });
+    } else {
+      setRefillDate(todayStr);
+    }
+  };
 
   return (
     <div className="app-container" dir="rtl">
       
-      {/* Push Notification Simulator */}
-      {showNotification && <NotificationToast />}
+      {/* 1. Automated Day 15 Treatment Alert Modal */}
+      <TreatmentAlertModal 
+        show={shouldShowAlertModal}
+        onClose={() => setAlertDismissed(true)}
+        onStartTreatment={() => {
+          setTreatmentStartDate(todayStr);
+          setAlertDismissed(true);
+        }}
+      />
+
+      {/* 2. Parent Real-time Missed Medication Push Notification */}
+      <ParentAlertNotification 
+        show={shouldShowParentNotification}
+        onClose={() => setParentAlertDismissed(true)}
+        treatmentDay={treatmentDay}
+      />
+
+      {/* 3. Undo Action Confirmation Dialog Modal */}
+      <ConfirmUndoModal 
+        show={confirmUndo !== null}
+        onClose={() => setConfirmUndo(null)}
+        onConfirm={confirmUndo ? confirmUndo.onConfirm : () => {}}
+        message={confirmUndo ? confirmUndo.message : ''}
+      />
 
       {/* Header Section */}
       <header className="app-header">
@@ -532,11 +822,60 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="app-main">
-        {role === 'teen' ? <TeenView /> : <ParentView />}
+        {role === 'teen' ? (
+          <TeenView 
+            cycleStartDate={cycleStartDate}
+            treatmentStartDate={treatmentStartDate}
+            markedTakenDays={markedTakenDays}
+            justMarkedDate={justMarkedDate}
+            todayStr={todayStr}
+            drugName={drugName}
+            dosage={dosage}
+            showRefillAlert={showRefillAlert}
+            daysUntilRefill={daysUntilRefill}
+            handleLogRefill={handleLogRefill}
+            onDayClick={(dateStr) => setSelectedDateForAction(dateStr)}
+            currentMonth={currentMonth}
+            setCurrentMonth={setCurrentMonth}
+            role={role}
+            setShowSettings={setShowSettings}
+            onToggleTaken={handleToggleTaken}
+          />
+        ) : (
+          <ParentView 
+            cycleStartDate={cycleStartDate}
+            treatmentStartDate={treatmentStartDate}
+            markedTakenDays={markedTakenDays}
+            todayStr={todayStr}
+            drugName={drugName}
+            daysUntilRefill={daysUntilRefill}
+            showRefillAlert={showRefillAlert}
+          />
+        )}
       </main>
       
-      {/* Settings Modal */}
-      {showSettings && <SettingsModal />}
+      {/* 4. Settings Modal (Prefilled setup) */}
+      <SettingsModal 
+        show={showSettings}
+        onClose={() => setShowSettings(false)}
+        drugName={drugName}
+        setDrugName={setDrugName}
+        dosage={dosage}
+        setDosage={setDosage}
+      />
+
+      {/* 5. Action-Based Calendar Day Click Options Modal */}
+      <DayActionModal 
+        show={selectedDateForAction !== null}
+        onClose={() => setSelectedDateForAction(null)}
+        dateStr={selectedDateForAction}
+        onMarkCycleStart={handleMarkCycleStart}
+        onMarkTreatmentStart={handleMarkTreatmentStart}
+        onToggleTaken={handleToggleTaken}
+        isCycleStart={selectedDateForAction === cycleStartDate}
+        isTreatmentStart={selectedDateForAction === treatmentStartDate}
+        isTaken={markedTakenDays[selectedDateForAction] === true}
+      />
 
     </div>
   );

@@ -96,7 +96,8 @@
   border: 1px solid rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   color: #7c3aed;
-  padding: 0.7rem;
+  width: 44px;
+  height: 44px;
   border-radius: 14px;
   cursor: pointer;
   display: flex;
@@ -129,6 +130,7 @@
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 44px;
 }
 
 .role-badge.is-teen {
@@ -276,6 +278,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.03);
   transition: all 0.3s ease;
 }
@@ -345,7 +349,7 @@
 }
 
 .med-status-tag {
-  background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+  background: #4c1d95;
   color: #ffffff;
   padding: 0.5rem 1rem;
   border-radius: 12px;
@@ -354,7 +358,9 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.2);
+  box-shadow: 0 4px 10px rgba(76, 29, 149, 0.2);
+  border: none;
+  cursor: pointer;
 }
 
 .mark-taken-btn {
@@ -401,8 +407,8 @@
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.8);
   color: #6d28d9;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -440,8 +446,9 @@
 }
 
 .date-btn {
-  width: 40px;
-  height: 40px;
+  width: 100%;
+  max-width: 44px;
+  aspect-ratio: 1 / 1;
   border-radius: 12px;
   border: none;
   background: transparent;
@@ -453,6 +460,7 @@
   justify-content: center;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  touch-action: manipulation;
 }
 
 .date-btn.is-clickable {
@@ -468,34 +476,64 @@
   transform: scale(0.95);
 }
 
-/* Modifiers for days */
-.date-btn.is-waiting {
-  background-color: rgba(fbcfe8, 0.7);
-  background: rgba(251, 207, 232, 0.4);
-  color: #be185d;
-  border: 1px dashed rgba(219, 39, 119, 0.35);
+/* Modifiers for days - Clean Action-Based Design */
+.date-btn.is-cycle-start {
+  border: 2px solid #f43f5e;
+  color: #f43f5e;
+  font-weight: 700;
 }
 
-.date-btn.is-medication {
-  background: rgba(233, 213, 255, 0.45);
-  color: #6b21a8;
-  border: 1px dashed rgba(147, 51, 234, 0.35);
+.date-btn.is-treatment-start {
+  border: 2px solid #7c3aed;
+  color: #7c3aed;
+  font-weight: 700;
 }
 
-.date-btn.is-bleeding {
-  background: #f43f5e;
+.date-btn.is-taken-day {
+  background-color: #4c1d95;
+  background: #4c1d95;
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 4px 10px rgba(244, 63, 94, 0.25);
+  box-shadow: 0 4px 10px rgba(76, 29, 149, 0.25);
   border: none;
 }
 
-.date-btn.is-taken {
-  background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
-  color: #ffffff;
-  font-weight: 700;
-  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25);
+@keyframes spinMorph {
+  0% {
+    transform: rotate(0deg);
+    background-color: transparent;
+    color: #475569;
+    box-shadow: none;
+  }
+  100% {
+    transform: rotate(360deg);
+    background-color: #4c1d95;
+    background: #4c1d95;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(76, 29, 149, 0.25);
+  }
+}
+
+.date-btn.animate-spin-morph {
+  animation: spinMorph 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   border: none;
+}
+
+/* Event marker dots at the bottom of calendar cells */
+.date-btn .marker-dot {
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.date-btn .marker-dot.cycle-start {
+  background-color: #f43f5e;
+}
+
+.date-btn .marker-dot.treatment-start {
+  background-color: #7c3aed;
 }
 
 .date-btn.is-today {
@@ -543,22 +581,18 @@
   border-radius: 4px;
 }
 
-.legend-dot.waiting {
-  background: rgba(251, 207, 232, 0.4);
-  border: 1px dashed rgba(219, 39, 119, 0.4);
+.legend-dot.cycle-start {
+  border: 2px solid #f43f5e;
+  background: transparent;
 }
 
-.legend-dot.bleeding {
-  background: #f43f5e;
-}
-
-.legend-dot.medication {
-  background: rgba(233, 213, 255, 0.45);
-  border: 1px dashed rgba(147, 51, 234, 0.4);
+.legend-dot.treatment-start {
+  border: 2px solid #7c3aed;
+  background: transparent;
 }
 
 .legend-dot.taken {
-  background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
 /* --- Action Buttons Grid --- */
@@ -897,7 +931,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   transition: color 0.2s ease;
 }
 
@@ -925,7 +961,7 @@
   border-radius: 16px;
   border: 1px solid rgba(124, 58, 237, 0.15);
   background: rgba(245, 243, 255, 0.5);
-  font-size: 0.9rem;
+  font-size: 16px;
   font-weight: 500;
   color: #1e1b4b;
   transition: all 0.2s ease;
@@ -1048,10 +1084,46 @@
   border: none;
   color: #c084fc;
   cursor: pointer;
-  padding: 0.2rem;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
   transition: color 0.2s ease;
 }
 
 .toast-close:hover {
   color: #7c3aed;
+}
+
+/* --- Mobile Specific Optimization (max-width: 480px) --- */
+@media (max-width: 480px) {
+  .app-container {
+    padding: 1rem 0.75rem;
+  }
+  .glass-card {
+    padding: 1.25rem 1rem;
+    border-radius: 22px;
+  }
+  .calendar-card {
+    padding: 0.75rem;
+  }
+  .calendar-grid {
+    gap: 0.35rem 0.15rem;
+  }
+  .weekday-header {
+    font-size: 0.7rem;
+  }
+  .calendar-legend {
+    gap: 0.5rem;
+    font-size: 0.7rem;
+  }
+  .status-title {
+    font-size: 1.25rem;
+  }
+  .inline-med-control {
+    padding: 0.75rem;
+    border-radius: 16px;
+  }
 }
