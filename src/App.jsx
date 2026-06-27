@@ -864,11 +864,31 @@ export default function App() {
   const today = new Date();
   const todayStr = getLocalDateString(today);
 
-  // Manually configured Treatment Start Date (set to null initially for demo/manual choice)
-  const [treatmentStartDate, setTreatmentStartDate] = useState(null);
+  // Initialize demo: Cycle start 14 days ago (fallback if no stored date exists)
+  const [cycleStartDate, setCycleStartDate] = useState(() => {
+    const saved = localStorage.getItem('cycleStartDate');
+    if (saved !== null) return saved === 'null' ? null : saved;
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return getLocalDateString(d);
+  });
+
+  // Manually configured Treatment Start Date
+  const [treatmentStartDate, setTreatmentStartDate] = useState(() => {
+    const saved = localStorage.getItem('treatmentStartDate');
+    if (saved === 'null') return null;
+    return saved || null;
+  });
 
   // Medication logs: key is dateStr, value is boolean
-  const [markedTakenDays, setMarkedTakenDays] = useState({});
+  const [markedTakenDays, setMarkedTakenDays] = useState(() => {
+    try {
+      const saved = localStorage.getItem('markedTakenDays');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   
   // Date which was just marked as taken, triggers local spin animation
   const [justMarkedDate, setJustMarkedDate] = useState(null);
