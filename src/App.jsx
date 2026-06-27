@@ -111,6 +111,7 @@ function SettingsModal({
   const [localReminderTimes, setLocalReminderTimes] = useState(reminderTimes);
   const [localParentName, setLocalParentName] = useState(parentName);
   const [localPurchaseDate, setLocalPurchaseDate] = useState(purchaseDate);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleInputFocus = (e) => {
     // Wait for the virtual keyboard to fully pop up and resize the viewport
@@ -120,6 +121,10 @@ function SettingsModal({
   };
 
   const handleSave = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmAndSave = () => {
     onSave({
       username: localUsername,
       age: localAge,
@@ -130,11 +135,45 @@ function SettingsModal({
       parentName: localParentName,
       purchaseDate: localPurchaseDate
     });
+    setShowConfirm(false);
   };
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal-content" style={{ maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+        {showConfirm && (
+          <div className="confirm-settings-overlay" style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(255, 255, 255, 0.98)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            zIndex: 10,
+            borderRadius: '28px',
+            textAlign: 'center',
+            animation: 'fadeIn 0.25s ease-out'
+          }}>
+            <AlertCircle size={48} style={{ color: '#7c3aed', marginBottom: '1rem' }} />
+            <h3 style={{ color: '#4c1d95', fontWeight: '800', marginBottom: '0.75rem' }}>אישור שמירת שינויים</h3>
+            <p style={{ color: '#6b21a8', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.45' }}>
+              האם את בטוחה שברצונך לשמור את השינויים החדשים בפרופיל הטיפול שלך?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+              <button onClick={confirmAndSave} className="submit-btn" style={{ margin: 0, flex: 1 }}>
+                כן, שמור
+              </button>
+              <button onClick={() => setShowConfirm(false)} className="submit-btn" style={{ margin: 0, flex: 1, background: '#64748b' }}>
+                ביטול
+              </button>
+            </div>
+          </div>
+        )}
         <div className="modal-header">
           <h2 className="modal-title">פרופיל והגדרות טיפול</h2>
           <button onClick={onClose} className="close-btn">
@@ -854,8 +893,10 @@ export default function App() {
   const [isOnboarded, setIsOnboarded] = useState(() => localStorage.getItem('isOnboarded') === 'true');
   const [onboardingStep, setOnboardingStep] = useState(() => {
     const saved = localStorage.getItem('isOnboarded') === 'true';
-    return saved ? 4 : 0; // Bypass onboarding if already onboarded (route directly to Main Calendar Dashboard Step 4)
+    return saved ? 5 : 0; // Bypass onboarding if already onboarded (route directly to Main Calendar Dashboard Step 5)
   });
+  const [isSavingData, setIsSavingData] = useState(false);
+  const [isOnboardingSaved, setIsOnboardingSaved] = useState(false);
   
   const [username, setUsername] = useState(() => localStorage.getItem('username') || '');
   const [age, setAge] = useState(() => localStorage.getItem('age') || '');
@@ -1204,14 +1245,38 @@ export default function App() {
     // Suppress Day 15 modal by setting cycleStartDate to null (it will only show if marked)
     setCycleStartDate(null);
 
-    // Set onboarded and route directly to Main Calendar Screen
-    setIsOnboarded(true);
+    // Route to Success Screen (Step 4) to display Invite Code and save buttons
     setOnboardingStep(4);
+  };
+
+  const handleSaveOnboardingData = () => {
+    setIsSavingData(true);
+    setTimeout(() => {
+      // Write all form inputs to the local database (Supabase/localStorage database emulation)
+      localStorage.setItem('username', username);
+      localStorage.setItem('age', age);
+      localStorage.setItem('drugName', drugName);
+      localStorage.setItem('dosage', dosage);
+      localStorage.setItem('frequency', frequency.toString());
+      localStorage.setItem('reminderTimes', JSON.stringify(reminderTimes));
+      localStorage.setItem('parentName', parentName);
+      localStorage.setItem('purchaseDate', purchaseDate);
+      localStorage.setItem('inviteCode', inviteCode);
+      localStorage.setItem('isOnboarded', 'true');
+      
+      setIsSavingData(false);
+      setIsOnboardingSaved(true);
+      setIsOnboarded(true);
+    }, 1200);
+  };
+
+  const handleFinishOnboarding = () => {
+    setOnboardingStep(5);
     setShowWelcomeNotification(true);
 
     // Trigger WhatsApp deep link with the updated message format
-    const liveUrl = `https://carecycle-new.vercel.app/?code=${code}`;
-    const messageText = `היי, זו האפליקציה שלי! קוד ההזמנה שלך הוא: ${code}. היכנס/י לכאן: ${liveUrl}`;
+    const liveUrl = `https://carecycle-new.vercel.app/?code=${inviteCode}`;
+    const messageText = `היי, זו האפליקציה שלי! קוד ההזמנה שלך הוא: ${inviteCode}. היכנס/י לכאן: ${liveUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
@@ -1310,10 +1375,11 @@ export default function App() {
   };
 
   // Helper: determine if onboarding forms should display
-  const showStartupSelector = !isOnboarded && role === 'teen' && onboardingStep === 0;
-  const showUsernameStep = !isOnboarded && role === 'teen' && onboardingStep === 1;
-  const showFormStep = !isOnboarded && role === 'teen' && onboardingStep === 2;
-  const showSuccessStep = !isOnboarded && role === 'teen' && onboardingStep === 3;
+  const showLandingPage = !isOnboarded && role === 'teen' && onboardingStep === 0;
+  const showStartupSelector = !isOnboarded && role === 'teen' && onboardingStep === 1;
+  const showUsernameStep = !isOnboarded && role === 'teen' && onboardingStep === 2;
+  const showFormStep = !isOnboarded && role === 'teen' && onboardingStep === 3;
+  const showSuccessStep = !isOnboarded && role === 'teen' && onboardingStep === 4;
   const showParentLogin = role === 'parent' && !parentConnected;
 
   return (
@@ -1457,7 +1523,51 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="app-main">
-        {showStartupSelector ? (
+        {showLandingPage ? (
+          <div className="landing-container">
+            <div className="landing-logo-wrapper">
+              <div className="landing-logo">
+                <HeartPulse size={48} />
+              </div>
+            </div>
+            
+            <div className="landing-hero">
+              <h2 className="landing-title">Care Cycle</h2>
+              <p className="landing-subtitle">Care Cycle - Your treatment, your way.</p>
+            </div>
+
+            <button onClick={() => setOnboardingStep(2)} className="landing-cta-btn">
+              התחילי מעקב (נערה)
+            </button>
+
+            <button onClick={() => setRole('parent')} className="landing-secondary-btn">
+              כניסה כהורה מפקח
+            </button>
+
+            <div className="glass-card install-guide-card">
+              <h3 className="install-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: '6px' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                מדריך התקנה למסך הבית (PWA)
+              </h3>
+              <div className="install-steps">
+                <div className="install-step">
+                  <span className="step-number">1</span>
+                  <span className="step-text">לחצי על כפור השיתוף בדפדפן (סמל <span style={{ fontWeight: 'bold' }}>שיתוף</span> 📤 בתחתית ה-iPhone או תפריט 3 הנקודות ב-Android).</span>
+                </div>
+                <div className="install-step">
+                  <span className="step-number">2</span>
+                  <span className="step-text">בחרי באפשרות <span style={{ fontWeight: 'bold' }}>"הוספה למסך הבית"</span> (Add to Home Screen) מתוך הרשימה.</span>
+                </div>
+                <div className="install-step">
+                  <span className="step-number">3</span>
+                  <span className="step-text">אשרי את השם ולחצי על "הוסף". האפליקציה תופיע כעת כאייקון עצמאי במסך הבית שלך לגישה מהירה ונוחה!</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : showStartupSelector ? (
           <div className="startup-container">
             <div className="startup-title-wrapper">
               <div className="startup-logo">
@@ -1626,9 +1736,25 @@ export default function App() {
               <span>שתפי בוואטסאפ</span>
             </button>
 
-            <button onClick={() => setOnboardingStep(4)} className="submit-btn" style={{ marginTop: '0.75rem' }}>
-              היכנסי לאפליקציה
-            </button>
+            {isSavingData ? (
+              <div className="save-loader-wrapper" style={{ marginTop: '1.5rem' }}>
+                <div className="save-spinner"></div>
+                <span className="save-text">שומר נתונים בשרת Supabase...</span>
+              </div>
+            ) : !isOnboardingSaved ? (
+              <button onClick={handleSaveOnboardingData} className="submit-btn" style={{ marginTop: '1.5rem', background: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)' }}>
+                שמירת נתונים
+              </button>
+            ) : (
+              <>
+                <div className="parent-warn-banner" style={{ border: '1px solid #10b981', background: '#ecfdf5', margin: '1.25rem 0', color: '#065f46', fontWeight: '700', fontSize: '0.85rem', textAlign: 'center' }}>
+                  נתוני הפרופיל נשמרו בהצלחה בשרת Supabase! 🎉
+                </div>
+                <button onClick={handleFinishOnboarding} className="submit-btn" style={{ marginTop: '0.75rem' }}>
+                  היכנסי לאפליקציה
+                </button>
+              </>
+            )}
           </div>
         ) : showParentLogin ? (
           <div className="glass-card status-card" style={{ maxWidth: '440px', margin: '2rem auto' }}>

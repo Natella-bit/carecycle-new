@@ -1437,3 +1437,193 @@
   box-shadow: 0 0 8px rgba(124, 58, 237, 0.4);
 }
 
+/* --- Landing Page Tech-Forward Styles --- */
+@keyframes floatIcon {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes pulseCTA {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.5);
+  }
+}
+
+.landing-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 0;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.landing-logo-wrapper {
+  margin-bottom: 2.5rem;
+}
+
+.landing-logo {
+  width: 90px;
+  height: 90px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%);
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.12);
+  animation: floatIcon 4s ease-in-out infinite;
+}
+
+.landing-hero {
+  margin-bottom: 2.5rem;
+}
+
+.landing-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #6d28d9 0%, #db2777 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.landing-subtitle {
+  font-size: 1rem;
+  color: #64748b;
+  max-width: 320px;
+  margin: 0 auto;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.landing-cta-btn {
+  background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+  color: white;
+  border: none;
+  padding: 1.1rem 2.2rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 1.5rem;
+  animation: pulseCTA 3s infinite;
+  transition: all 0.3s ease;
+}
+
+.landing-cta-btn:hover {
+  transform: translateY(-2px);
+}
+
+.landing-secondary-btn {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: #6d28d9;
+  padding: 0.9rem 1.8rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 18px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 300px;
+  transition: all 0.25s ease;
+}
+
+.landing-secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #7c3aed;
+  transform: translateY(-2px);
+}
+
+.install-guide-card {
+  margin-top: 3.5rem;
+  width: 100%;
+  max-width: 400px;
+  text-align: right;
+  border: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.install-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #4c1d95;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.install-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.step-number {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f5f3ff;
+  color: #7c3aed;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.step-text {
+  font-size: 0.85rem;
+  color: #4b5563;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+/* Save Data Step Loader */
+.save-loader-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 0;
+}
+
+.save-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(124, 58, 237, 0.1);
+  border-top-color: #7c3aed;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.save-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #6d28d9;
+}
+
